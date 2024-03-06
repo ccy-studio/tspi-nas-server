@@ -9,7 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class TspiNasServerApplication {
 
     public static void main(String[] args) {
-        
         log.info("Start TSPI NAS SERVER...");
         SpringApplication.run(TspiNasServerApplication.class, args);
         log.info("====>>> Started TSPI NAS SERVER Successful!");

@@ -25,5 +25,13 @@ public class SystemConfiguration {
      */
     private String adminPassword;
 
+    /**
+     * Token加密KEY
+     */
+    private String accessTokenSecurityKey;
 
+    /**
+     * Token有效期
+     */
+    private long accessTokenTtl;
 }
