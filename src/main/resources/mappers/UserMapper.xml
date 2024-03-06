@@ -9,4 +9,10 @@
           and user_account = #{account}
         limit 1
     </select>
+    <select id="selectByAccessKeyUser" resultType="com.saisaiwa.tspi.nas.domain.entity.User">
+        select *
+        from t_user
+        where access_key = #{ak}
+          and is_delete = 0
+    </select>
 </mapper>

@@ -2,26 +2,39 @@ package com.saisaiwa.tspi.nas.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.hutool.crypto.asymmetric.RSA;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.bean.TokenClaim;
 import com.saisaiwa.tspi.nas.common.bean.TokenPair;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
 import com.saisaiwa.tspi.nas.config.SystemConfiguration;
 import com.saisaiwa.tspi.nas.domain.entity.User;
+import com.saisaiwa.tspi.nas.domain.entity.UserGroupBind;
 import com.saisaiwa.tspi.nas.domain.req.LoginReq;
+import com.saisaiwa.tspi.nas.domain.req.UserRegisterReq;
 import com.saisaiwa.tspi.nas.domain.vo.LoginRspVo;
 import com.saisaiwa.tspi.nas.domain.vo.UserInfoVo;
+import com.saisaiwa.tspi.nas.mapper.UserGroupBindMapper;
 import com.saisaiwa.tspi.nas.mapper.UserMapper;
 import com.saisaiwa.tspi.nas.service.SessionService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -31,10 +44,14 @@ import java.util.concurrent.TimeUnit;
  * @Version：1.0
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class SessionServiceImpl implements SessionService {
 
     @Resource
     private UserMapper userMapper;
+
+    @Resource
+    private UserGroupBindMapper userGroupBindMapper;
 
     @Resource
     private SystemConfiguration systemConfiguration;
@@ -87,6 +104,43 @@ public class SessionServiceImpl implements SessionService {
     }
 
     /**
+     * Token检查解析
+     *
+     * @param token
+     * @return
+     */
+    public SessionInfo checkTokenAndGetSession(String token) {
+        DecodedJWT decodedJWT;
+        try {
+            decodedJWT = JWT.require(jwtAlgorithm).build().verify(token);
+        } catch (TokenExpiredException e) {
+            throw new BizException(RespCode.SESSION_TIMEOUT);
+        } catch (JWTVerificationException e) {
+            throw new BizException(RespCode.INVALID_TOKEN);
+        }
+
+        if (decodedJWT == null) {
+            throw new BizException(RespCode.INVALID_TOKEN);
+        }
+        Claim userId = decodedJWT.getClaim(TokenClaim.USER_ID);
+        if (userId == null || userId.isNull()) {
+            throw new BizException(RespCode.INVALID_TOKEN);
+        }
+        Long uid = userId.asLong();
+        User user = userMapper.selectById(uid);
+        if (user == null || user.getIsDelete() != 0) {
+            throw new BizException(RespCode.INVALID_TOKEN);
+        }
+        SessionInfo sessionInfo = new SessionInfo();
+        sessionInfo.setUser(user);
+        sessionInfo.setUid(uid);
+        sessionInfo.setAk(user.getAccessKey());
+        sessionInfo.setSk(user.getSecretKey());
+        SessionInfo.set(sessionInfo);
+        return sessionInfo;
+    }
+
+    /**
      * 生成密码与盐填充到User对象中
      *
      * @param user
@@ -98,8 +152,35 @@ public class SessionServiceImpl implements SessionService {
         user.setUserPassword(pwd);
     }
 
-    public void register() {
-
+    /**
+     * 注册用户
+     *
+     * @param req
+     */
+    public void register(UserRegisterReq req) {
+        if (userMapper.selectByUserAccountUser(req.getUserAccount()) != null) {
+            throw new BizException("此账号已存在");
+        }
+        User user = BeanUtil.copyProperties(req, User.class);
+        generatorPwd(user, req.getPassword());
+        String ak = StrUtil.sub(IdUtil.fastSimpleUUID(), 0, 20);
+        String sk = StrUtil.sub(IdUtil.fastSimpleUUID() + IdUtil.fastSimpleUUID(), 0, 40);
+        while (userMapper.selectByAccessKeyUser(ak) != null) {
+            ak = StrUtil.sub(IdUtil.fastSimpleUUID(), 0, 20);
+        }
+        user.setAccessKey(ak);
+        user.setSecretKey(sk);
+        user.setCreateTime(LocalDateTime.now());
+        user.setCreateUser(SessionInfo.get().getUid());
+        if (userMapper.insert(user) <= 0) {
+            throw new BizException(RespCode.ERROR);
+        }
+        UserGroupBind bind = new UserGroupBind();
+        bind.setUserId(user.getId());
+        bind.setUserGroupId(req.getUserGroupId());
+        if (userGroupBindMapper.insert(bind) <= 0) {
+            throw new BizException(RespCode.ERROR);
+        }
     }
 
 }

@@ -21,4 +21,11 @@ public interface UserMapper extends BaseMapper<User> {
      */
     User selectByUserAccountUser(String account);
 
+    /**
+     * 根据AK查用户
+     * @param ak
+     * @return
+     */
+    User selectByAccessKeyUser(String ak);
+
 }

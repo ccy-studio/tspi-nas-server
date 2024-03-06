@@ -16,7 +16,7 @@ public class UserRegisterReq {
     /**
      * 用户账户
      */
-    @NotBlank
+    @NotBlank(message = "帐号不可为空")
     private String userAccount;
 
     /**
@@ -32,12 +32,12 @@ public class UserRegisterReq {
     /**
      * 密码
      */
-    @NotBlank
+    @NotBlank(message = "请输入密码")
     private String password;
 
     /**
      * 用户组ID
      */
-    @NotNull
+    @NotNull(message = "用户组不可为空")
     private Long userGroupId;
 }
