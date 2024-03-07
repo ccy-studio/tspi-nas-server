@@ -16,10 +16,17 @@ public class ApplicationConfig implements WebMvcConfigurer {
     @Resource
     private WebRequestLogAdapter webRequestLogAdapter;
 
+    @Resource
+    private SysSessionInterceptor sysSessionInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(webRequestLogAdapter)
                 .excludePathPatterns("/ok");
+        registry.addInterceptor(sysSessionInterceptor)
+                .excludePathPatterns("/ok")
+                .excludePathPatterns("/sys/login")
+                .excludePathPatterns("/ntf");
     }
 
     /**

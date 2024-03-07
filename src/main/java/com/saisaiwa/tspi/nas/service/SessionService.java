@@ -1,5 +1,9 @@
 package com.saisaiwa.tspi.nas.service;
 
+import com.saisaiwa.tspi.nas.domain.req.LoginReq;
+import com.saisaiwa.tspi.nas.domain.req.UserRegisterReq;
+import com.saisaiwa.tspi.nas.domain.vo.LoginRspVo;
+
 /**
  * @Description:
  * @Author: Chen Ze Deng
@@ -7,4 +11,9 @@ package com.saisaiwa.tspi.nas.service;
  * @Version：1.0
  */
 public interface SessionService {
+    LoginRspVo login(LoginReq req);
+
+    void checkTokenAndGetSession(String token);
+
+    void register(UserRegisterReq req);
 }

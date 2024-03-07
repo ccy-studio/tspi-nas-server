@@ -4,7 +4,6 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
-import cn.hutool.crypto.asymmetric.RSA;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
@@ -32,7 +31,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
@@ -76,6 +74,7 @@ public class SessionServiceImpl implements SessionService {
      * @param req
      * @return
      */
+    @Override
     public LoginRspVo login(LoginReq req) {
         User user = userMapper.selectByUserAccountUser(req.getAccount());
         if (user == null) {
@@ -109,7 +108,8 @@ public class SessionServiceImpl implements SessionService {
      * @param token
      * @return
      */
-    public SessionInfo checkTokenAndGetSession(String token) {
+    @Override
+    public void checkTokenAndGetSession(String token) {
         DecodedJWT decodedJWT;
         try {
             decodedJWT = JWT.require(jwtAlgorithm).build().verify(token);
@@ -137,7 +137,6 @@ public class SessionServiceImpl implements SessionService {
         sessionInfo.setAk(user.getAccessKey());
         sessionInfo.setSk(user.getSecretKey());
         SessionInfo.set(sessionInfo);
-        return sessionInfo;
     }
 
     /**
@@ -157,6 +156,7 @@ public class SessionServiceImpl implements SessionService {
      *
      * @param req
      */
+    @Override
     public void register(UserRegisterReq req) {
         if (userMapper.selectByUserAccountUser(req.getUserAccount()) != null) {
             throw new BizException("此账号已存在");
