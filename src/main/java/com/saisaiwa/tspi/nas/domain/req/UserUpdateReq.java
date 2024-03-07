@@ -1,27 +1,22 @@
 package com.saisaiwa.tspi.nas.domain.req;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import org.hibernate.validator.constraints.Length;
 
 import java.util.List;
 
 /**
  * @Description:
  * @Author: Chen Ze Deng
- * @Date: 2024/3/6 19:46
+ * @Date: 2024/3/7 15:18
  * @Version：1.0
  */
 @Data
-public class UserRegisterReq {
+public class UserUpdateReq {
 
-    /**
-     * 用户账户
-     */
-    @NotBlank(message = "帐号不可为空")
-    private String userAccount;
+    @NotNull
+    private Long id;
 
     /**
      * 昵称
@@ -33,12 +28,6 @@ public class UserRegisterReq {
      */
     private String mobile;
 
-    /**
-     * 密码
-     */
-    @NotBlank(message = "请输入密码")
-    @Length(min = 6, message = "至少六位")
-    private String password;
 
     /**
      * 用户组ID

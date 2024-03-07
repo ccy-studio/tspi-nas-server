@@ -2,4 +2,21 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.saisaiwa.tspi.nas.mapper.UserGroupMapper">
 
+    <select id="selectExtInfoList" resultType="com.saisaiwa.tspi.nas.domain.dto.UserGroupExtDto">
+        select ug.*,
+        count(rug.id) as bindResCount,
+        count(ugb.id) as bindUserCount
+        from t_user_group as ug
+        join t_user_group_bind as ugb on ug.id = ugb.user_group_id
+        join t_resources_user_group as rug on rug.user_group_id = ug.id
+        <where>
+            <if test="id neq null">
+                and ug.id = #{id}
+            </if>
+            <if test="keyword neq null and keyword neq ''">
+                and ug.group_name like concat('%',#{keyword},'%')
+            </if>
+        </where>
+        group by ug.id
+    </select>
 </mapper>

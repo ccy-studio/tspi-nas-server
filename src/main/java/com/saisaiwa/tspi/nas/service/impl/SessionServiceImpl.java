@@ -1,8 +1,6 @@
 package com.saisaiwa.tspi.nas.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -17,12 +15,9 @@ import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
 import com.saisaiwa.tspi.nas.config.SystemConfiguration;
 import com.saisaiwa.tspi.nas.domain.entity.User;
-import com.saisaiwa.tspi.nas.domain.entity.UserGroupBind;
 import com.saisaiwa.tspi.nas.domain.req.LoginReq;
-import com.saisaiwa.tspi.nas.domain.req.UserRegisterReq;
 import com.saisaiwa.tspi.nas.domain.vo.LoginRspVo;
 import com.saisaiwa.tspi.nas.domain.vo.UserInfoVo;
-import com.saisaiwa.tspi.nas.mapper.UserGroupBindMapper;
 import com.saisaiwa.tspi.nas.mapper.UserMapper;
 import com.saisaiwa.tspi.nas.service.SessionService;
 import jakarta.annotation.PostConstruct;
@@ -32,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -47,9 +41,6 @@ public class SessionServiceImpl implements SessionService {
 
     @Resource
     private UserMapper userMapper;
-
-    @Resource
-    private UserGroupBindMapper userGroupBindMapper;
 
     @Resource
     private SystemConfiguration systemConfiguration;
@@ -137,50 +128,6 @@ public class SessionServiceImpl implements SessionService {
         sessionInfo.setAk(user.getAccessKey());
         sessionInfo.setSk(user.getSecretKey());
         SessionInfo.set(sessionInfo);
-    }
-
-    /**
-     * 生成密码与盐填充到User对象中
-     *
-     * @param user
-     * @param originPwd
-     */
-    public void generatorPwd(User user, String originPwd) {
-        user.setSalt(IdUtil.fastSimpleUUID());
-        String pwd = SecureUtil.md5(originPwd.trim() + user.getSalt());
-        user.setUserPassword(pwd);
-    }
-
-    /**
-     * 注册用户
-     *
-     * @param req
-     */
-    @Override
-    public void register(UserRegisterReq req) {
-        if (userMapper.selectByUserAccountUser(req.getUserAccount()) != null) {
-            throw new BizException("此账号已存在");
-        }
-        User user = BeanUtil.copyProperties(req, User.class);
-        generatorPwd(user, req.getPassword());
-        String ak = StrUtil.sub(IdUtil.fastSimpleUUID(), 0, 20);
-        String sk = StrUtil.sub(IdUtil.fastSimpleUUID() + IdUtil.fastSimpleUUID(), 0, 40);
-        while (userMapper.selectByAccessKeyUser(ak) != null) {
-            ak = StrUtil.sub(IdUtil.fastSimpleUUID(), 0, 20);
-        }
-        user.setAccessKey(ak);
-        user.setSecretKey(sk);
-        user.setCreateTime(LocalDateTime.now());
-        user.setCreateUser(SessionInfo.get().getUid());
-        if (userMapper.insert(user) <= 0) {
-            throw new BizException(RespCode.ERROR);
-        }
-        UserGroupBind bind = new UserGroupBind();
-        bind.setUserId(user.getId());
-        bind.setUserGroupId(req.getUserGroupId());
-        if (userGroupBindMapper.insert(bind) <= 0) {
-            throw new BizException(RespCode.ERROR);
-        }
     }
 
 }

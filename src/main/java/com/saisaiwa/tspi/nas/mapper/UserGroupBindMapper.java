@@ -13,4 +13,7 @@ import com.saisaiwa.tspi.nas.domain.entity.UserGroupBind;
  */
 public interface UserGroupBindMapper extends BaseMapper<UserGroupBind> {
 
+    void deleteByUserId(Long id);
+
+    void deleteByUserGroupId(Long id);
 }

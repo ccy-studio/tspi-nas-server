@@ -1,7 +1,10 @@
 package com.saisaiwa.tspi.nas.service;
 
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
+import com.saisaiwa.tspi.nas.domain.req.UserPasswordReq;
 import com.saisaiwa.tspi.nas.domain.req.UserQueryReq;
+import com.saisaiwa.tspi.nas.domain.req.UserRegisterReq;
+import com.saisaiwa.tspi.nas.domain.req.UserUpdateReq;
 import com.saisaiwa.tspi.nas.domain.vo.UserInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.UserListVo;
 
@@ -15,4 +18,12 @@ public interface UserService {
     UserInfoVo getUserInfo(Long id);
 
     PageBodyResponse<UserListVo> getUserList(UserQueryReq req);
+
+    void deleteUser(Long id);
+
+    void updateUser(UserUpdateReq req);
+
+    void changePassword(UserPasswordReq req);
+
+    void register(UserRegisterReq req);
 }

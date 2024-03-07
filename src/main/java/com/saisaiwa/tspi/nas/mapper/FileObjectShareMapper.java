@@ -13,4 +13,6 @@ import com.saisaiwa.tspi.nas.domain.entity.FileObjectShare;
  */
 public interface FileObjectShareMapper extends BaseMapper<FileObjectShare> {
 
+    void deleteByCreateUser(Long uid);
+
 }

@@ -10,14 +10,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 class TspiNasServerApplicationTests {
 
 
-    @Resource
-    private SessionServiceImpl sessionService;
 
     @Test
     void contextLoads() {
-        User user = new User();
-        user.setUserAccount("admin");
-        sessionService.generatorPwd(user, "admin");
 
     }
 

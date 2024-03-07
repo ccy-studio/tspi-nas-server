@@ -1,7 +1,6 @@
 package com.saisaiwa.tspi.nas.service;
 
 import com.saisaiwa.tspi.nas.domain.req.LoginReq;
-import com.saisaiwa.tspi.nas.domain.req.UserRegisterReq;
 import com.saisaiwa.tspi.nas.domain.vo.LoginRspVo;
 
 /**
@@ -15,5 +14,4 @@ public interface SessionService {
 
     void checkTokenAndGetSession(String token);
 
-    void register(UserRegisterReq req);
 }

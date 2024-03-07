@@ -13,4 +13,7 @@ import com.saisaiwa.tspi.nas.domain.entity.ResourcesUserGroup;
  */
 public interface ResourcesUserGroupMapper extends BaseMapper<ResourcesUserGroup> {
 
+    void deleteByUserGroupId(Long id);
+
+    int countByResId(Long id);
 }
