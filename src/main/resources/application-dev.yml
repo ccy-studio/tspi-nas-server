@@ -4,3 +4,9 @@ spring:
     url: jdbc:mysql://43.142.172.195:3301/tspi_nas?allowMultiQueries=true&useSSL=false&useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&useAffectedRows=true
     username: root
     password: saisaiwa.com
+
+sys:
+  adminAccount: admin
+  admin-password: admin
+  access-token-security-key: xad1xx2dlxo/accs7vsfccmne
+  access-token-ttl: 3600

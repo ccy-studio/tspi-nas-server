@@ -1,6 +1,9 @@
 package com.saisaiwa.tspi.nas.service;
 
+import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
+import com.saisaiwa.tspi.nas.domain.req.UserQueryReq;
 import com.saisaiwa.tspi.nas.domain.vo.UserInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.UserListVo;
 
 /**
  * @Description:
@@ -10,4 +13,6 @@ import com.saisaiwa.tspi.nas.domain.vo.UserInfoVo;
  */
 public interface UserService {
     UserInfoVo getUserInfo(Long id);
+
+    PageBodyResponse<UserListVo> getUserList(UserQueryReq req);
 }

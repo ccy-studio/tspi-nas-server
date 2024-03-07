@@ -1,7 +1,11 @@
 package com.saisaiwa.tspi.nas.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.saisaiwa.tspi.nas.domain.dto.UserExtDto;
 import com.saisaiwa.tspi.nas.domain.entity.User;
+import com.saisaiwa.tspi.nas.domain.req.UserQueryReq;
+
+import java.util.List;
 
 /**
  * <p>
@@ -23,9 +27,17 @@ public interface UserMapper extends BaseMapper<User> {
 
     /**
      * 根据AK查用户
+     *
      * @param ak
      * @return
      */
     User selectByAccessKeyUser(String ak);
 
+    /**
+     * 查询用户列表信息
+     *
+     * @param query
+     * @return
+     */
+    List<UserExtDto> selectUserExt(UserQueryReq query);
 }

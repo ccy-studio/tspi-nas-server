@@ -48,6 +48,4 @@ public class LoginController {
                 .map(BaseResponse::ok)
                 .orElse(BaseResponse.fail());
     }
-
-
 }

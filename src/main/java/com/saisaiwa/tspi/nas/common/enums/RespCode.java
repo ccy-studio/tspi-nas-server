@@ -23,7 +23,8 @@ public enum RespCode {
     SESSION_TIMEOUT(4002, "Session timeout"),
     INVALID_TOKEN(4003, "Invalid token"),
     INVALID_PARAMS(420, "Invalid parameters"),
-    PERMISSION_DENIED(403, "Permission denied");
+    PERMISSION_DENIED(403, "Permission denied"),
+    DATA_REFUSE(5002,"此数据拒绝操作");
 
     private int code;
     private String msg;

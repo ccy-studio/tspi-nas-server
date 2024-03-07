@@ -30,7 +30,8 @@ public class SysSessionInterceptor implements HandlerInterceptor {
         boolean ignoreSession = this.ignoreHandle(handler);
         String authorization = httpReq.getHeader("Authorization");
         if (StrUtil.isEmpty(authorization)) {
-            if (!ignoreSession) { // 需要登录态，但没有传Token
+            // 需要登录态，但没有传Token
+            if (!ignoreSession) {
                 throw new BizException(RespCode.UNAUTHORIZED);
             }
         } else {
