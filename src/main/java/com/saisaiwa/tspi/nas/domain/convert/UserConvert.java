@@ -9,6 +9,7 @@ import com.saisaiwa.tspi.nas.domain.vo.UserGroupDetailVo;
 import com.saisaiwa.tspi.nas.domain.vo.UserGroupListVo;
 import com.saisaiwa.tspi.nas.domain.vo.UserListVo;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.NullValueCheckStrategy;
 
 import java.util.List;
@@ -30,8 +31,10 @@ public interface UserConvert {
 
     List<UserGroupListVo> toUserGroupListVo(List<UserGroupExtDto> dto);
 
+    @Mapping(target = "createTime", dateFormat = "yyyy-MM-dd HH:mm")
     UserGroupDetailVo toUserGroupDetailVo(UserGroupExtDto dto);
 
     UserGroupDetailVo.ResourceItem toUserGroupDetailRes(Resources resource);
+
     List<UserGroupDetailVo.ResourceItem> toUserGroupDetailRes(List<Resources> resource);
 }

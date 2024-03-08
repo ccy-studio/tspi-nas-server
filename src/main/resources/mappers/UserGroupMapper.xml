@@ -7,7 +7,7 @@
         count(rug.id) as bindResCount,
         count(ugb.id) as bindUserCount
         from t_user_group as ug
-        join t_user_group_bind as ugb on ug.id = ugb.user_group_id
+        left join t_user_group_bind as ugb on ug.id = ugb.user_group_id
         join t_resources_user_group as rug on rug.user_group_id = ug.id
         <where>
             <if test="id neq null">

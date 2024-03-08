@@ -4,9 +4,17 @@ spring:
     url: jdbc:mysql://43.142.172.195:3301/tspi_nas?allowMultiQueries=true&useSSL=false&useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&useAffectedRows=true
     username: root
     password: saisaiwa.com
+    hikari:
+      minimum-idle: 30
+      maximum-pool-size: 100
+      auto-commit: true
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-test-query: SELECT 1
 
 sys:
   adminAccount: admin
   admin-password: admin
-  access-token-security-key: xad1xx2dlxo/accs7vsfccmne
+  access-token-security-key: 1fad18b905d108be28/f708d38d427c
   access-token-ttl: 3600

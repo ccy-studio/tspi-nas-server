@@ -30,7 +30,7 @@ public class UserGroupEditReq {
     /**
      * 资源ID列表
      */
-    @NotNull
-    @NotEmpty
+    @NotNull(message = "绑定资源不可为空")
+    @NotEmpty(message = "绑定资源不可为空")
     private List<Long> resIds;
 }

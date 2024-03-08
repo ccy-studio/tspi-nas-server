@@ -30,4 +30,9 @@ public class UserGroupListVo {
      * 绑定资源数量
      */
     private Integer bindResCount;
+
+    /**
+     * 创建时间
+     */
+    private String createTime;
 }

@@ -18,7 +18,7 @@
                 and res_type = #{resType}
             </if>
             <if test="keyword neq null and keyword neq ''">
-                and res_name like concat('%',#{res_name},'%')
+                and res_name like concat('%',#{keyword},'%')
             </if>
             and is_delete = 0
         </where>
