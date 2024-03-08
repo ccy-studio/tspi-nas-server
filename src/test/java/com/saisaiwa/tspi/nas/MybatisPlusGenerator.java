@@ -23,7 +23,7 @@ public class MybatisPlusGenerator {
         AutoGenerator generator = new AutoGenerator(dataSourceConfig);
         generator.strategy(new StrategyConfig.Builder()
                 .addTablePrefix("t_")
-                .addInclude("^t_.*")
+                .addInclude(GENERATOR_TABLES)
                 .entityBuilder()
                 .enableFileOverride()
                 .disableSerialVersionUID()

@@ -1,6 +1,9 @@
 package com.saisaiwa.tspi.nas.service;
 
+import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.domain.req.ResourcesEditReq;
+import com.saisaiwa.tspi.nas.domain.req.ResourcesQueryReq;
+import com.saisaiwa.tspi.nas.domain.vo.ResourcesInfoVo;
 
 /**
  * @Description:
@@ -10,4 +13,10 @@ import com.saisaiwa.tspi.nas.domain.req.ResourcesEditReq;
  */
 public interface ResourcesService {
     void saveOrUpdateResources(ResourcesEditReq req);
+
+    void deleteById(Long id);
+
+    PageBodyResponse<ResourcesInfoVo> selectList(ResourcesQueryReq req);
+
+    ResourcesInfoVo getDetailById(Long id);
 }

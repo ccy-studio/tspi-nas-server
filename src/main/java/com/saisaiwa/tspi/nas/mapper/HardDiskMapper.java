@@ -2,6 +2,9 @@ package com.saisaiwa.tspi.nas.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.saisaiwa.tspi.nas.domain.entity.HardDisk;
+import com.saisaiwa.tspi.nas.domain.req.HardDiskQueryReq;
+
+import java.util.List;
 
 /**
  * <p>
@@ -12,5 +15,7 @@ import com.saisaiwa.tspi.nas.domain.entity.HardDisk;
  * @since 2024-03-06
  */
 public interface HardDiskMapper extends BaseMapper<HardDisk> {
+
+    List<HardDisk> selectTableList(HardDiskQueryReq req);
 
 }

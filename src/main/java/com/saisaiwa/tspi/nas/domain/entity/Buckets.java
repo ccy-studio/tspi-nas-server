@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  * </p>
  *
  * @author Saisaiwa
- * @since 2024-03-06
+ * @since 2024-03-08
  */
 @Getter
 @Setter
@@ -45,6 +45,24 @@ public class Buckets {
      */
     @TableField("res_id")
     private Long resId;
+
+    /**
+     * 权限:0私有,1公读公写,2公读私写
+     */
+    @TableField("permissions")
+    private Integer permissions;
+
+    /**
+     * 权限范围:0私有,1资源内公开,2全公开,
+     */
+    @TableField("permissions_scope")
+    private Integer permissionsScope;
+
+    /**
+     * 是否是静态页面
+     */
+    @TableField("static_page")
+    private Boolean staticPage;
 
     /**
      * 是否已删除 0:未删除

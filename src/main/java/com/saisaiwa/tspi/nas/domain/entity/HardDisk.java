@@ -34,6 +34,9 @@ public class HardDisk {
     @TableField("mount_path")
     private String mountPath;
 
+    /**
+     * 设备名称/sdax
+     */
     @TableField("device")
     private String device;
 

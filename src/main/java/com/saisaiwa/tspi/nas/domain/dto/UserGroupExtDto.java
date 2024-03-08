@@ -17,11 +17,11 @@ public class UserGroupExtDto extends UserGroup {
     /**
      * 绑定用户数量
      */
-    private int bindUserCount;
+    private Integer bindUserCount;
 
     /**
      * 绑定资源数量
      */
-    private int bindResCount;
+    private Integer bindResCount;
 
 }

@@ -2,4 +2,18 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.saisaiwa.tspi.nas.mapper.HardDiskMapper">
 
+    <select id="selectTableList" resultType="com.saisaiwa.tspi.nas.domain.entity.HardDisk">
+        select * from t_hard_disk
+        <where>
+            <if test="id neq null">
+                and id = #{id}
+            </if>
+            <if test="keyword neq null and keyword neq ''">
+                and (
+                device like concat('%',#{keyword},'%') or
+                mount_path like concat('%',#{keyword},'%')
+                )
+            </if>
+        </where>
+    </select>
 </mapper>

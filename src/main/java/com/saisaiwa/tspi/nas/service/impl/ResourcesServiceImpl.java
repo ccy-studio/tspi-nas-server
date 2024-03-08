@@ -1,18 +1,23 @@
 package com.saisaiwa.tspi.nas.service.impl;
 
 import cn.hutool.core.lang.Assert;
+import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
 import com.saisaiwa.tspi.nas.domain.convert.ResourcesConvert;
 import com.saisaiwa.tspi.nas.domain.entity.Resources;
 import com.saisaiwa.tspi.nas.domain.req.ResourcesEditReq;
+import com.saisaiwa.tspi.nas.domain.req.ResourcesQueryReq;
+import com.saisaiwa.tspi.nas.domain.vo.ResourcesInfoVo;
 import com.saisaiwa.tspi.nas.mapper.ResourcesMapper;
 import com.saisaiwa.tspi.nas.mapper.ResourcesUserGroupMapper;
 import com.saisaiwa.tspi.nas.service.ResourcesService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * @Description:
@@ -49,6 +54,12 @@ public class ResourcesServiceImpl implements ResourcesService {
         }
     }
 
+    /**
+     * 删除资源根据ID
+     *
+     * @param id
+     */
+    @Override
     public void deleteById(Long id) {
         Resources resources = resourcesMapper.selectById(id);
         Assert.notNull(resources);
@@ -58,5 +69,34 @@ public class ResourcesServiceImpl implements ResourcesService {
         if (resourcesMapper.deleteById(id) <= 0) {
             throw new BizException(RespCode.PROMPT);
         }
+    }
+
+    /**
+     * 查询资源列表数据
+     *
+     * @param req
+     * @return
+     */
+    @Override
+    public PageBodyResponse<ResourcesInfoVo> selectList(ResourcesQueryReq req) {
+        List<Resources> resources = resourcesMapper.selectAllByCondition(req);
+        return PageBodyResponse.convert(req, ResourcesConvert.INSTANCE.toResourcesInfoVo(resources));
+    }
+
+    /**
+     * 查询资源详情根据ID
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public ResourcesInfoVo getDetailById(Long id) {
+        ResourcesQueryReq req = new ResourcesQueryReq();
+        req.setId(id);
+        List<Resources> resources = resourcesMapper.selectAllByCondition(req);
+        if (resources.isEmpty()) {
+            return null;
+        }
+        return ResourcesConvert.INSTANCE.toResourcesInfoVo(resources.get(0));
     }
 }

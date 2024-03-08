@@ -28,8 +28,6 @@ public interface UserConvert {
 
     UserGroup toUserGroup(UserGroupEditReq req);
 
-    UserGroupListVo toUserGroupListVo(UserGroupExtDto dto);
-
     List<UserGroupListVo> toUserGroupListVo(List<UserGroupExtDto> dto);
 
     UserGroupDetailVo toUserGroupDetailVo(UserGroupExtDto dto);

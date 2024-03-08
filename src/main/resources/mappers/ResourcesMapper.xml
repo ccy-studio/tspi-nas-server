@@ -8,4 +8,19 @@
                  join t_resources_user_group as rug on rug.res_id = res.id
         where rug.user_group_id = #{id}
     </select>
+    <select id="selectAllByCondition" resultType="com.saisaiwa.tspi.nas.domain.entity.Resources">
+        select * from t_resources
+        <where>
+            <if test="id neq null">
+                and id = #{id}
+            </if>
+            <if test="resType neq null">
+                and res_type = #{resType}
+            </if>
+            <if test="keyword neq null and keyword neq ''">
+                and res_name like concat('%',#{res_name},'%')
+            </if>
+            and is_delete = 0
+        </where>
+    </select>
 </mapper>

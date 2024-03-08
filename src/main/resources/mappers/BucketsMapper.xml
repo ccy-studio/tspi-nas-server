@@ -2,4 +2,64 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.saisaiwa.tspi.nas.mapper.BucketsMapper">
 
+    <select id="selectByBucketsName" resultType="com.saisaiwa.tspi.nas.mapper.BucketsMapper">
+        select *
+        from t_buckets
+        where is_delete = 0
+          and buckets_name = #{name}
+        limit 1
+    </select>
+
+    <select id="isOtherContain" resultType="java.lang.Boolean">
+        select count(id)
+        from t_buckets
+        where is_delete = 0
+          and mount_point like concat(#{path}, '%')
+        limit 1
+    </select>
+
+    <select id="selectList" resultType="com.saisaiwa.tspi.nas.domain.dto.BucketsExtDto">
+        select bk.*,res.res_name
+        from t_buckets as bk
+        join t_resources as res on res.id = bk.res_id
+        join t_policies_rule as pr on pr.buckets_id = bk.id
+        <if test="uid neq null">
+            join t_resources_user_group as rug on rug.res_id = bk.res_id
+            left join t_user_group_bind as ugb on ugb.user_group_id = rug.user_group_id
+        </if>
+        <where>
+            and bk.is_delete = 0
+            <if test="id neq null">
+                and bk.id = #{id}
+            </if>
+            <if test="keyword neq null and keyword neq ''">
+                and bk.buckets_name like concat('%',#{keyword},'%')
+            </if>
+            <if test="uid neq null">
+                and (
+                pr.user_id = #{uid} or
+                (bk.permissions != 0 and bk.permissions_scope = 2) or
+                (bk.permissions != 0 and bk.permissions_scope = 1 and ugb.user_id = #{uid})
+                )
+            </if>
+        </where>
+    </select>
+    <select id="selectBucketsPremissByUid" resultType="com.saisaiwa.tspi.nas.domain.dto.BucketsPremissDto">
+        select bk.*,
+               pr.user_id,
+               pr.action,
+               pr.effect
+        from t_buckets as bk
+                 join t_resources as res on res.id = bk.res_id
+                 join t_policies_rule as pr on pr.buckets_id = bk.id
+                 join t_resources_user_group as rug on rug.res_id = bk.res_id
+                 left join t_user_group_bind as ugb on ugb.user_group_id = rug.user_group_id
+        where bk.is_delete = 0
+          and bk.id = #{bkId}
+          and (
+            pr.user_id = #{uid} or
+            (bk.permissions != 0 and bk.permissions_scope = 2) or
+            (bk.permissions != 0 and bk.permissions_scope = 1 and ugb.user_id = #{uid})
+            )
+    </select>
 </mapper>

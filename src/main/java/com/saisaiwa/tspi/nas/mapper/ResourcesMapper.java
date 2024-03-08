@@ -2,6 +2,7 @@ package com.saisaiwa.tspi.nas.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.saisaiwa.tspi.nas.domain.entity.Resources;
+import com.saisaiwa.tspi.nas.domain.req.ResourcesQueryReq;
 
 import java.util.List;
 
@@ -23,4 +24,11 @@ public interface ResourcesMapper extends BaseMapper<Resources> {
      */
     List<Resources> selectAllByUserGroupId(Long id);
 
+    /**
+     * 查询全部数据
+     *
+     * @param req
+     * @return
+     */
+    List<Resources> selectAllByCondition(ResourcesQueryReq req);
 }
