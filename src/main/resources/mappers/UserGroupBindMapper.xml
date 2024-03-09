@@ -12,4 +12,9 @@
         from t_user_group_bind
         where user_group_id = #{id}
     </delete>
+    <select id="selectUserGroupIdsByUserId" resultType="java.lang.Long">
+        select user_group_id
+        from t_user_group_bind
+        where user_id = #{uid}
+    </select>
 </mapper>

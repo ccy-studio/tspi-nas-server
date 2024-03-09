@@ -16,14 +16,9 @@ import org.springframework.stereotype.Component;
 public class SystemConfiguration {
 
     /**
-     * 管理员帐户
+     * 默认的重置密码
      */
-    private String adminAccount;
-
-    /**
-     * 管理员密码
-     */
-    private String adminPassword;
+    private String defaultPassword;
 
     /**
      * Token加密KEY

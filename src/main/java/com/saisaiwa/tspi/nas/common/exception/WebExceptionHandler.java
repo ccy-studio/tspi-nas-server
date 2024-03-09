@@ -33,7 +33,7 @@ public class WebExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(BizException.class)
     public BaseResponse<Void> bizException(BizException ex) {
         LOGGER.error("Business exceptions: ", ex);
-        return BaseResponse.fail(ex.getRespCode());
+        return BaseResponse.fail(ex.getCode(), ex.getMsg());
     }
 
     @ExceptionHandler(DuplicateKeyException.class)

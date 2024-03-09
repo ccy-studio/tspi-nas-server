@@ -1,6 +1,7 @@
 package com.saisaiwa.tspi.nas.domain.req;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @Description:
@@ -8,8 +9,9 @@ import lombok.Data;
  * @Date: 2024/3/8 10:32
  * @Version：1.0
  */
-@Data
-public class BucketsQueryReq {
+@Setter
+@Getter
+public class BucketsQueryReq{
 
     private String keyword;
 

@@ -12,19 +12,25 @@ import lombok.Getter;
 @Getter
 public class BizException extends RuntimeException {
 
-    private RespCode respCode = RespCode.PROMPT;
+    private final String msg;
+
+    private final int code;
 
     public BizException(RespCode respCode) {
         super(respCode.getMsg());
-        this.respCode = respCode;
+        this.msg = respCode.getMsg();
+        this.code = respCode.getCode();
     }
 
     public BizException(String msg) {
         super(msg);
+        this.msg = msg;
+        this.code = RespCode.PROMPT.getCode();
     }
 
     public BizException(RespCode respCode, String msg) {
         super(msg);
-        this.respCode = respCode;
+        this.code = respCode.getCode();
+        this.msg = msg;
     }
 }

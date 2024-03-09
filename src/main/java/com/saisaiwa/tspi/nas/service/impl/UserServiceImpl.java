@@ -9,6 +9,7 @@ import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
+import com.saisaiwa.tspi.nas.config.SystemConfiguration;
 import com.saisaiwa.tspi.nas.domain.convert.UserConvert;
 import com.saisaiwa.tspi.nas.domain.dto.UserExtDto;
 import com.saisaiwa.tspi.nas.domain.entity.User;
@@ -53,6 +54,9 @@ public class UserServiceImpl implements UserService {
     @Resource
     private UserGroupBindMapper userGroupBindMapper;
 
+    @Resource
+    private SystemConfiguration systemConfiguration;
+
     /**
      * 获取用户信息
      *
@@ -65,7 +69,10 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             return null;
         }
-        return BeanUtil.copyProperties(user, UserInfoVo.class);
+        UserInfoVo userInfoVo = BeanUtil.copyProperties(user, UserInfoVo.class);
+        List<Long> groupIdsByUserId = userGroupBindMapper.selectUserGroupIdsByUserId(id);
+        userInfoVo.setUserGroupIds(groupIdsByUserId);
+        return userInfoVo;
     }
 
     /**
@@ -104,7 +111,9 @@ public class UserServiceImpl implements UserService {
     public void updateUser(UserUpdateReq req) {
         User user = userMapper.selectById(req.getId());
         Assert.notNull(user);
-        BeanUtil.copyProperties(req, user);
+        user.setNickName(req.getNickName());
+        user.setMobile(req.getMobile());
+        userMapper.updateById(user);
         userGroupBindMapper.deleteByUserId(req.getId());
         req.getUserGroupIds().stream().distinct().forEach(v -> {
             UserGroupBind bind = new UserGroupBind();
@@ -167,6 +176,23 @@ public class UserServiceImpl implements UserService {
                 throw new BizException(RespCode.ERROR);
             }
         });
+    }
+
+    /**
+     * 重置密码
+     *
+     * @param uid
+     */
+    @Override
+    public void resetPassword(Long uid) {
+        if (uid.intValue() == UserEnum.ADMIN.getCode()) {
+            throw new BizException(RespCode.DATA_REFUSE);
+        }
+        User user = userMapper.selectById(uid);
+        Assert.notNull(user);
+        generatorPwd(user, SecureUtil.md5(systemConfiguration.getDefaultPassword()));
+        user.setUpdateUser(SessionInfo.get().getUid());
+        userMapper.updateById(user);
     }
 
     /**

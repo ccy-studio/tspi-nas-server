@@ -4,6 +4,7 @@ import com.saisaiwa.tspi.nas.common.anno.SessionCheck;
 import com.saisaiwa.tspi.nas.common.bean.BaseResponse;
 import com.saisaiwa.tspi.nas.common.bean.IdReq;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
+import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.domain.req.UserPasswordReq;
 import com.saisaiwa.tspi.nas.domain.req.UserQueryReq;
 import com.saisaiwa.tspi.nas.domain.req.UserRegisterReq;
@@ -16,7 +17,9 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-/** 用户管理
+/**
+ * 用户管理
+ *
  * @Description:
  * @Author: Chen Ze Deng
  * @Date: 2024/3/7 10:51
@@ -82,9 +85,22 @@ public class UserController {
      */
     @PostMapping("/change-pwd")
     public BaseResponse<Void> changePassword(@RequestBody @Validated UserPasswordReq req) {
+        req.setId(SessionInfo.get().getUid());
         userService.changePassword(req);
         return BaseResponse.ok();
     }
+
+    /**
+     * 重置密码
+     *
+     * @param uid
+     */
+    @PostMapping("/reset-pwd")
+    public BaseResponse<Void> resetPassword(@RequestBody @Validated IdReq<Long> req) {
+        userService.resetPassword(req.getId());
+        return BaseResponse.ok();
+    }
+
 
     /**
      * 注册用户

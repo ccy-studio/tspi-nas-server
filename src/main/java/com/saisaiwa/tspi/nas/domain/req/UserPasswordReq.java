@@ -14,7 +14,6 @@ import org.hibernate.validator.constraints.Length;
 @Data
 public class UserPasswordReq {
 
-    @NotNull
     private Long id;
 
     @NotBlank

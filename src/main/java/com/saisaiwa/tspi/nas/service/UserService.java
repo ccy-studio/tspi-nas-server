@@ -26,4 +26,6 @@ public interface UserService {
     void changePassword(UserPasswordReq req);
 
     void register(UserRegisterReq req);
+
+    void resetPassword(Long uid);
 }

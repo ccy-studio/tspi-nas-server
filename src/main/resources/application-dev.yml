@@ -14,7 +14,6 @@ spring:
       connection-test-query: SELECT 1
 
 sys:
-  adminAccount: admin
-  admin-password: admin
+  default-password: sswnas123
   access-token-security-key: 1fad18b905d108be28/f708d38d427c
   access-token-ttl: 3600

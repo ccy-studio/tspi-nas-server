@@ -19,8 +19,8 @@
         select tu.*,
         group_concat(ug.group_name order by ugb.id desc SEPARATOR ',') as groupName
         from t_user as tu
-        join t_user_group_bind as ugb on ugb.user_id = tu.id
-        join t_user_group as ug on ug.id = ugb.user_group_id
+        left join t_user_group_bind as ugb on ugb.user_id = tu.id
+        left join t_user_group as ug on ug.id = ugb.user_group_id
         <where>
             <if test="id != null">
                 and tu.id = #{id}
@@ -29,7 +29,7 @@
                 and (
                 tu.nick_name like concat('%',#{keyword},'%') or
                 tu.user_account like concat('%',#{keyword},'%') or
-                ug.group_name like concat('%',#{keyword},'%') or
+                ug.group_name like concat('%',#{keyword},'%')
                 )
             </if>
             <if test="groupId neq null">

@@ -2,6 +2,8 @@ package com.saisaiwa.tspi.nas.domain.vo;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @Description:
  * @Author: Chen Ze Deng
@@ -35,4 +37,13 @@ public class UserInfoVo {
      */
     private String accessKey;
 
+    /**
+     * 创建时间
+     */
+    private String createTime;
+
+    /**
+     * 用户组名称
+     */
+    private List<Long> userGroupIds;
 }

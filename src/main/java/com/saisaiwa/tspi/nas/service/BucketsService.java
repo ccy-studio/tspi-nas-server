@@ -1,6 +1,11 @@
 package com.saisaiwa.tspi.nas.service;
 
 import com.saisaiwa.tspi.nas.domain.req.BucketsEditReq;
+import com.saisaiwa.tspi.nas.domain.req.BucketsQueryReq;
+import com.saisaiwa.tspi.nas.domain.vo.BucketsInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.BucketsPermissionUserVo;
+
+import java.util.List;
 
 /**
  * @Description:
@@ -10,4 +15,8 @@ import com.saisaiwa.tspi.nas.domain.req.BucketsEditReq;
  */
 public interface BucketsService {
     void createBuckets(BucketsEditReq req);
+
+    List<BucketsInfoVo> getBucketAll(BucketsQueryReq req);
+
+    BucketsPermissionUserVo getPermissionByUser(Long bucketsId, Long uid);
 }

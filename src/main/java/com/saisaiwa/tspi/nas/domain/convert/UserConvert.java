@@ -23,6 +23,7 @@ import java.util.List;
 @Mapper(componentModel = "spring", nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS)
 public interface UserConvert {
 
+    @Mapping(target = "createTime", dateFormat = "yyyy-MM-dd HH:mm")
     UserListVo toUserListVo(UserExtDto userExtDto);
 
     List<UserListVo> toUserListVo(List<UserExtDto> userExtDto);

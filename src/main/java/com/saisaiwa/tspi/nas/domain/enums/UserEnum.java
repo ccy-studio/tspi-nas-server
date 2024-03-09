@@ -14,7 +14,7 @@ import lombok.Getter;
 @Getter
 public enum UserEnum {
 
-    ADMIN(0, "admin");
+    ADMIN(1, "admin");
 
     private int code;
     private String msg;

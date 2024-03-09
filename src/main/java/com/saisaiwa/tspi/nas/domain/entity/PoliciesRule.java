@@ -47,7 +47,7 @@ public class PoliciesRule {
     private Boolean effect;
 
     /**
-     * 操作:get_obj,put_obj,del_obj,share_obj,super
+     * 操作:get_obj,put_obj,del_obj,share_obj,super多个分号分隔
      */
     @TableField("action")
     private String action;

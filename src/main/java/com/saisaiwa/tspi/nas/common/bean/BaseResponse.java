@@ -1,4 +1,5 @@
 package com.saisaiwa.tspi.nas.common.bean;
+
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.util.NanoIdUtil;
 import lombok.Getter;
@@ -38,6 +39,10 @@ public class BaseResponse<T> {
 
     public static <T> BaseResponse<T> fail(RespCode err) {
         return fail(err, null);
+    }
+
+    public static <T> BaseResponse<T> fail(int code, String msg) {
+        return fail(code, msg, null);
     }
 
     public static <T> BaseResponse<T> fail(RespCode respCode, T data) {
