@@ -3,6 +3,7 @@ package com.saisaiwa.tspi.nas.domain.req;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.hibernate.validator.constraints.Range;
 
 /**
  * @Description:
@@ -37,12 +38,14 @@ public class BucketsEditReq {
      * 权限:0私有,1公读公写,2公读私写
      */
     @NotNull
+    @Range(min = 0,max = 2)
     private Integer permissions;
 
     /**
      * 权限范围:0私有,1资源内公开,2全公开,
      */
     @NotNull
+    @Range(min = 0,max = 2)
     private Integer permissionsScope;
 
     /**

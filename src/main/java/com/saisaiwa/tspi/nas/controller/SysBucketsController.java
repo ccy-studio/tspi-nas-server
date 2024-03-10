@@ -2,13 +2,14 @@ package com.saisaiwa.tspi.nas.controller;
 
 import com.saisaiwa.tspi.nas.common.bean.BaseResponse;
 import com.saisaiwa.tspi.nas.domain.req.BucketsEditReq;
+import com.saisaiwa.tspi.nas.domain.req.BucketsQueryReq;
+import com.saisaiwa.tspi.nas.domain.vo.BucketsInfoVo;
 import com.saisaiwa.tspi.nas.service.BucketsService;
 import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @Description:
@@ -33,5 +34,16 @@ public class SysBucketsController {
     public BaseResponse<Void> createBuckets(@RequestBody @Validated BucketsEditReq req) {
         bucketsService.createBuckets(req);
         return BaseResponse.ok();
+    }
+
+    /**
+     * 查询此用户可见的存储桶
+     *
+     * @param req
+     * @return
+     */
+    @GetMapping("list")
+    public BaseResponse<List<BucketsInfoVo>> getBucketAll(BucketsQueryReq req) {
+        return BaseResponse.ok(bucketsService.getBucketAll(req));
     }
 }

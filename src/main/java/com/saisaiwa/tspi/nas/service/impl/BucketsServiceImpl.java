@@ -63,11 +63,13 @@ public class BucketsServiceImpl implements BucketsService {
             }
             buckets.setCreateUser(SessionInfo.get().getUid());
             bucketsMapper.insert(buckets);
+            //添加存储桶的权限策略
             PoliciesRule policiesRule = new PoliciesRule();
             policiesRule.setBucketsId(buckets.getId());
             policiesRule.setCreateUser(buckets.getCreateUser());
             policiesRule.setEffect(true);
             policiesRule.setAction(BucketsActionEnum.SUPER_AUTH.getPremiss());
+            policiesRule.setCreateUser(SessionInfo.get().getUid());
             policiesRuleMapper.insert(policiesRule);
             //todo 路径文件新建
         } else {
@@ -83,6 +85,12 @@ public class BucketsServiceImpl implements BucketsService {
         }
     }
 
+    /**
+     * 查询此用户可见的存储桶
+     *
+     * @param req
+     * @return
+     */
     @Override
     public List<BucketsInfoVo> getBucketAll(BucketsQueryReq req) {
         Long uid = SessionInfo.get().getUid();
@@ -90,7 +98,24 @@ public class BucketsServiceImpl implements BucketsService {
             uid = null;
         }
         List<BucketsExtDto> dtoList = bucketsMapper.selectTableList(req.getId(), req.getKeyword(), uid);
-        return BucketsConvert.INSTANCE.toBucketsInfoVo(dtoList);
+        List<BucketsInfoVo> infoVos = BucketsConvert.INSTANCE.toBucketsInfoVo(dtoList);
+        if (Boolean.TRUE.equals(req.getDisplayPermission())) {
+            for (BucketsInfoVo infoVo : infoVos) {
+                BucketsPermissionUserVo vo;
+                if (uid == null) {
+                    vo = new BucketsPermissionUserVo();
+                    vo.setRead(true);
+                    vo.setWrite(true);
+                    vo.setDelete(true);
+                    vo.setShare(true);
+                    vo.setManage(true);
+                } else {
+                    vo = getPermissionByUser(infoVo.getId(), uid);
+                }
+                infoVo.setAcl(vo);
+            }
+        }
+        return infoVos;
     }
 
     /**

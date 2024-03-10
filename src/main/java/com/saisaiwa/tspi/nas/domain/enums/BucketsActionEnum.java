@@ -3,6 +3,9 @@ package com.saisaiwa.tspi.nas.domain.enums;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 /**
  * 操作:get_obj,put_obj,del_obj,share_obj,super
  *
@@ -24,4 +27,12 @@ public enum BucketsActionEnum {
 
     private final String premiss;
 
+    /**
+     * 返回操作权限字符描述的集合
+     * @param ems
+     * @return
+     */
+    public static String toAction(BucketsActionEnum... ems) {
+        return Arrays.stream(ems).map(BucketsActionEnum::getPremiss).collect(Collectors.joining(";"));
+    }
 }

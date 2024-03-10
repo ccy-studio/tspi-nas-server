@@ -1,6 +1,5 @@
 package com.saisaiwa.tspi.nas.controller;
 
-import com.saisaiwa.tspi.nas.common.anno.SessionCheck;
 import com.saisaiwa.tspi.nas.common.bean.BaseResponse;
 import com.saisaiwa.tspi.nas.common.bean.IdReq;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
@@ -39,7 +38,6 @@ public class UserController {
      * @param req
      * @return
      */
-    @SessionCheck(ignore = true)
     @GetMapping("/list")
     public BaseResponse<PageBodyResponse<UserListVo>> getUserList(UserQueryReq req) {
         return BaseResponse.ok(userService.getUserList(req));
