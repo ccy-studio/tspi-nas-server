@@ -126,6 +126,19 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
+     * 根据用户account获取SK
+     *
+     * @param account
+     * @return
+     */
+    @Override
+    public String getSk(String account) {
+        User user = userMapper.selectByUserAccountUser(account);
+        Assert.notNull(user);
+        return user.getSecretKey();
+    }
+
+    /**
      * 修改密码
      *
      * @param req

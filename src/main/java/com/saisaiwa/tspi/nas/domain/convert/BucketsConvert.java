@@ -1,10 +1,14 @@
 package com.saisaiwa.tspi.nas.domain.convert;
 
 import com.saisaiwa.tspi.nas.domain.dto.BucketsExtDto;
+import com.saisaiwa.tspi.nas.domain.dto.PoliciesRuleExtDto;
 import com.saisaiwa.tspi.nas.domain.entity.Buckets;
 import com.saisaiwa.tspi.nas.domain.req.BucketsEditReq;
+import com.saisaiwa.tspi.nas.domain.vo.BucketsAclInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.BucketsDetailVo;
 import com.saisaiwa.tspi.nas.domain.vo.BucketsInfoVo;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.NullValueCheckStrategy;
 import org.mapstruct.factory.Mappers;
 
@@ -22,6 +26,16 @@ public interface BucketsConvert {
 
     Buckets toBuckets(BucketsEditReq req);
 
+    BucketsDetailVo toBucketsDetailVo(Buckets buckets);
+
+    @Mapping(target = "createTime", dateFormat = "yyyy-MM-dd HH:mm")
     BucketsInfoVo toBucketsInfoVo(BucketsExtDto dto);
+
     List<BucketsInfoVo> toBucketsInfoVo(List<BucketsExtDto> dto);
+
+    @Mapping(target = "createTime", dateFormat = "yyyy-MM-dd HH:mm")
+    @Mapping(target = "updateTime", dateFormat = "yyyy-MM-dd HH:mm")
+    BucketsAclInfoVo toBucketsAclInfoVo(PoliciesRuleExtDto extDto);
+
+    List<BucketsAclInfoVo> toBucketsAclInfoVo(List<PoliciesRuleExtDto> extDto);
 }

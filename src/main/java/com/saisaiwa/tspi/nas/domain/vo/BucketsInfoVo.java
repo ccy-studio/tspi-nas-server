@@ -12,6 +12,11 @@ import lombok.Data;
 public class BucketsInfoVo {
 
     /**
+     * 自增主键
+     */
+    private Long id;
+
+    /**
      * 桶名称
      */
     private String bucketsName;
@@ -30,4 +35,14 @@ public class BucketsInfoVo {
      * 资源名称
      */
     private String resName;
+
+    /**
+     * 创建时间
+     */
+    private String createTime;
+
+    /**
+     * 用户的ACL
+     */
+    private BucketsPermissionUserVo acl;
 }

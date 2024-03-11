@@ -15,5 +15,10 @@ public class BucketsQueryReq{
 
     private String keyword;
 
+    /**
+     * 是否返回用户ACL
+     */
+    private Boolean displayPermission;
+
     private Long id;
 }

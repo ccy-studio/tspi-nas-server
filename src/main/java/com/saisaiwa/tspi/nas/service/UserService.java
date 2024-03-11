@@ -23,6 +23,8 @@ public interface UserService {
 
     void updateUser(UserUpdateReq req);
 
+    String getSk(String account);
+
     void changePassword(UserPasswordReq req);
 
     void register(UserRegisterReq req);

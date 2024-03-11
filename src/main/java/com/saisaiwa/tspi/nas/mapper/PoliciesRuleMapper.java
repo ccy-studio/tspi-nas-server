@@ -1,7 +1,12 @@
 package com.saisaiwa.tspi.nas.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.saisaiwa.tspi.nas.domain.dto.PoliciesRuleExtDto;
 import com.saisaiwa.tspi.nas.domain.entity.PoliciesRule;
+import com.saisaiwa.tspi.nas.domain.req.BucketsAclQueryReq;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * <p>
@@ -13,4 +18,19 @@ import com.saisaiwa.tspi.nas.domain.entity.PoliciesRule;
  */
 public interface PoliciesRuleMapper extends BaseMapper<PoliciesRule> {
 
+    /**
+     * 查询ACL的权限根据用户的id和桶id
+     * @param uid
+     * @param bid
+     * @return
+     */
+    PoliciesRule selectByUserIdAndBucketsId(@Param("uid") Long uid, @Param("bid") Long bid);
+
+
+    /**
+     * 根据桶id查询所有的acl
+     * @param req
+     * @return
+     */
+    List<PoliciesRuleExtDto> selectExtAll(BucketsAclQueryReq req);
 }

@@ -2,4 +2,32 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.saisaiwa.tspi.nas.mapper.PoliciesRuleMapper">
 
+    <select id="selectByUserIdAndBucketsId" resultType="com.saisaiwa.tspi.nas.domain.entity.PoliciesRule">
+        select *
+        from t_policies_rule
+        where user_id = #{uid}
+          and buckets_id = #{bid}
+    </select>
+    <select id="selectExtAll" resultType="com.saisaiwa.tspi.nas.domain.dto.PoliciesRuleExtDto">
+        select
+        rule.*,
+        us.nick_name,
+        us.user_account,
+        bk.res_id as bucketsResId
+        from t_policies_rule as rule
+        join t_buckets as bk on bk.id = rule.buckets_id
+        join t_user as us on rule.user_id = us.id
+        <where>
+            <if test="keyword neq null and keyword neq ''">
+                and (
+                us.nick_name like concat('%',#{keyword},'%') or
+                us.user_account like concat('%',#{keyword},'%')
+                )
+            </if>
+            <if test="action neq null and action neq ''">
+                and rule.action like concat('%',#{action},'%')
+            </if>
+            and rule.buckets_id = #{bid}
+        </where>
+    </select>
 </mapper>

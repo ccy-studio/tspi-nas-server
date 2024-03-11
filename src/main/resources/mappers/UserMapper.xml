@@ -38,4 +38,11 @@
         </where>
         group by tu.id
     </select>
+    <select id="selectResAllByUserBinds" resultType="com.saisaiwa.tspi.nas.domain.entity.Resources">
+        select distinct res.id, res.res_name
+        from t_resources as res
+                 join t_resources_user_group as rug on rug.res_id = res.id
+                 join t_user_group_bind as ugb on ugb.user_group_id = rug.user_group_id
+        where ugb.user_id = #{id}
+    </select>
 </mapper>

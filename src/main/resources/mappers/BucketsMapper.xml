@@ -22,8 +22,8 @@
         select bk.*,res.res_name
         from t_buckets as bk
         join t_resources as res on res.id = bk.res_id
-        join t_policies_rule as pr on pr.buckets_id = bk.id
         <if test="uid neq null">
+            join t_policies_rule as pr on pr.buckets_id = bk.id
             join t_resources_user_group as rug on rug.res_id = bk.res_id
             left join t_user_group_bind as ugb on ugb.user_group_id = rug.user_group_id
         </if>
@@ -43,6 +43,7 @@
                 )
             </if>
         </where>
+        group by bk.id
     </select>
     <select id="selectBucketsPremissByUid" resultType="com.saisaiwa.tspi.nas.domain.dto.BucketsPremissDto">
         select bk.*,

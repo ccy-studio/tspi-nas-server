@@ -5,15 +5,16 @@ spring:
     username: root
     password: saisaiwa.com
     hikari:
-      minimum-idle: 30
-      maximum-pool-size: 100
+      minimum-idle: 5
+      maximum-pool-size: 15
       auto-commit: true
-      idle-timeout: 30000
-      max-lifetime: 1800000
+      idle-timeout: 100000
+      max-lifetime: 270000
       connection-timeout: 30000
       connection-test-query: SELECT 1
+
 
 sys:
   default-password: sswnas123
   access-token-security-key: 1fad18b905d108be28/f708d38d427c
-  access-token-ttl: 3600
+  access-token-ttl: 7200

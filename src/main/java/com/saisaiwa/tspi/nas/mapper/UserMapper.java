@@ -2,6 +2,7 @@ package com.saisaiwa.tspi.nas.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.saisaiwa.tspi.nas.domain.dto.UserExtDto;
+import com.saisaiwa.tspi.nas.domain.entity.Resources;
 import com.saisaiwa.tspi.nas.domain.entity.User;
 import com.saisaiwa.tspi.nas.domain.req.UserQueryReq;
 
@@ -40,4 +41,12 @@ public interface UserMapper extends BaseMapper<User> {
      * @return
      */
     List<UserExtDto> selectUserExt(UserQueryReq query);
+
+    /**
+     * 查询获取这个用户所关联到的全部资源数据
+     *
+     * @param uid
+     * @return
+     */
+    List<Resources> selectResAllByUserBinds(Long uid);
 }

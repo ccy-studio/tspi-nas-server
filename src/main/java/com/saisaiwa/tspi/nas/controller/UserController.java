@@ -1,6 +1,5 @@
 package com.saisaiwa.tspi.nas.controller;
 
-import com.saisaiwa.tspi.nas.common.anno.SessionCheck;
 import com.saisaiwa.tspi.nas.common.bean.BaseResponse;
 import com.saisaiwa.tspi.nas.common.bean.IdReq;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
@@ -13,6 +12,7 @@ import com.saisaiwa.tspi.nas.domain.vo.UserInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.UserListVo;
 import com.saisaiwa.tspi.nas.service.UserService;
 import jakarta.annotation.Resource;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +39,6 @@ public class UserController {
      * @param req
      * @return
      */
-    @SessionCheck(ignore = true)
     @GetMapping("/list")
     public BaseResponse<PageBodyResponse<UserListVo>> getUserList(UserQueryReq req) {
         return BaseResponse.ok(userService.getUserList(req));
@@ -54,6 +53,18 @@ public class UserController {
     @GetMapping("/get")
     public BaseResponse<UserInfoVo> getUserInfo(@NotNull Long id) {
         return BaseResponse.ok(userService.getUserInfo(id));
+    }
+
+
+    /**
+     * 根据用户account获取SK
+     *
+     * @param account
+     * @return
+     */
+    @GetMapping("/getSk")
+    public BaseResponse<String> getSk(@NotBlank String account) {
+        return BaseResponse.ok(userService.getSk(account));
     }
 
     /**
