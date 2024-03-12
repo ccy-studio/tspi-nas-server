@@ -17,9 +17,24 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
 
     /**
      * 查询全部根据存储桶id
+     *
      * @param bid
      * @return
      */
     List<FileObject> getListByBucketId(Long bid);
 
+    /**
+     * 删除全部文件根据桶id
+     * @param bid
+     */
+    void deleteByBucketsId(Long bid);
+
+
+    /**
+     * 获取存储桶下的root根文件夹
+     *
+     * @param bid
+     * @return
+     */
+    FileObject getRootObject(Long bid);
 }

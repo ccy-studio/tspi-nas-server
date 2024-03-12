@@ -15,7 +15,7 @@ import java.util.List;
 public class MybatisPlusGenerator {
 
     private static final List<String> GENERATOR_TABLES = List.of(
-            "t_buckets"
+            "t_file_block_records"
     );
 
     public static void main(String[] args) {
@@ -35,7 +35,7 @@ public class MybatisPlusGenerator {
                 .disable(TemplateType.CONTROLLER, TemplateType.SERVICE, TemplateType.SERVICE_IMPL)
                 .build());
         generator.global(new GlobalConfig.Builder()
-                .outputDir("D:\\MyTempProjects\\tspi-nas-server\\src\\test\\java\\com\\saisaiwa\\tspi\\nas")
+                .outputDir("./generatorOutput")
                 .author("Saisaiwa")
                 .disableOpenDir()
                 .build());

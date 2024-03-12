@@ -25,6 +25,7 @@ public enum RespCode {
     INVALID_PARAMS(420, "Invalid parameters"),
     PERMISSION_DENIED(403, "Permission denied"),
     ACL_PERMISSION_DENIED(4003, "Buckets Permission denied"),
+    FILE_ERROR(50000, "FileObject read failure!"),
     DATA_REFUSE(5002,"此数据拒绝操作");
 
     private int code;

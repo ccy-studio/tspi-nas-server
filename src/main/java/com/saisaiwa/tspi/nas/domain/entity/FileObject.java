@@ -47,10 +47,16 @@ public class FileObject {
     private String fileContentType;
 
     /**
-     * 完整文件路径
+     * 文件路径
      */
     @TableField("file_path")
     private String filePath;
+
+    /**
+     * 真实物理路径
+     */
+    @TableField("real_path")
+    private String realPath;
 
     /**
      * 文件大小
