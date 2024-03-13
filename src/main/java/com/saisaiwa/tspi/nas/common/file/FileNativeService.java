@@ -1,12 +1,12 @@
 package com.saisaiwa.tspi.nas.common.file;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FastByteBuffer;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
 import com.saisaiwa.tspi.nas.domain.entity.Buckets;
@@ -22,7 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @description:
@@ -31,7 +33,7 @@ import java.util.List;
  **/
 @Component
 @Slf4j
-public class FileObjectService {
+public class FileNativeService {
 
     @Resource
     private FileObjectMapper fileObjectMapper;
@@ -229,11 +231,7 @@ public class FileObjectService {
         if (!FileUtil.exist(fileObject.getRealPath())) {
             return false;
         }
-        File file = new File(fileObject.getRealPath());
-        if (FileUtil.isFile(file)) {
-            return FileUtil.del(file);
-        }
-        return false;
+        return FileUtil.del(fileObject.getRealPath());
     }
 
 
@@ -246,7 +244,7 @@ public class FileObjectService {
      * @return boolean
      */
     public boolean moveFileObject(FileObject sourceFileObject, FileObject targetFolder, boolean autoOverwrite) {
-        if (!(targetFolder.getIsDir() && !sourceFileObject.getIsDir())) {
+        if (!targetFolder.getIsDir()) {
             return false;
         }
         if (!FileUtil.exist(sourceFileObject.getRealPath()) || !FileUtil.exist(targetFolder.getRealPath())) {
@@ -254,9 +252,36 @@ public class FileObjectService {
         }
         File source = new File(sourceFileObject.getRealPath());
         File target = new File(targetFolder.getRealPath());
-        if (!(FileUtil.isFile(source) && FileUtil.isDirectory(target))) {
+        if (!target.isDirectory()) {
             return false;
         }
+        //查询原始此路径下所有的文件
+        List<FileObject> list = fileObjectMapper.selectAllByStartPath(sourceFileObject.getFilePath());
+        Set<String> delRealPaths = new HashSet<>();
+        for (FileObject object : list) {
+            object.setBucketsId(targetFolder.getBucketsId());
+            object.setCreateUser(SessionInfo.getAndNull().getUid());
+            object.setCreateTime(LocalDateTime.now());
+            object.setUpdateTime(LocalDateTime.now());
+            object.setUpdateUser(null);
+            String filePath = object.getFilePath();
+            filePath = targetFolder.getFilePath() + filePath.substring(sourceFileObject.getFilePath().length());
+            object.setFilePath(filePath);
+            String realPath = object.getRealPath();
+            realPath = targetFolder.getRealPath() + realPath.substring(sourceFileObject.getRealPath().length());
+            if (FileUtil.exist(realPath)) {
+                if (autoOverwrite) {
+                    delRealPaths.add(realPath);
+                } else {
+                    realPath = null;
+                }
+            }
+            object.setRealPath(realPath);
+        }
+        if (!delRealPaths.isEmpty()) {
+            fileObjectMapper.deleteByRealPathAndBucketsId(targetFolder.getBucketsId(), delRealPaths);
+        }
+
         try {
             FileUtil.copy(source, target, autoOverwrite);
         } catch (Exception e) {
@@ -267,13 +292,11 @@ public class FileObjectService {
         if (!result.exists()) {
             return false;
         }
-        String md5 = SecureUtil.md5(result);
-        if (!md5.equals(sourceFileObject.getFileMd5())) {
-            FileUtil.del(result);
-            return false;
-        }
+        //移动成功在删除掉源文件
         FileUtil.del(source);
-        sourceFileObject.setFilePath(result.getAbsolutePath());
+
+        list.stream().filter(v -> StrUtil.isNotBlank(v.getRealPath()))
+                .forEach(fileObjectMapper::updateById);
         return true;
     }
 
@@ -287,44 +310,106 @@ public class FileObjectService {
      * @param logicCopy    是否逻辑复制
      * @return {@link FileObject}
      */
-    public FileObject copyFileObject(FileObject source, FileObject targetFolder, boolean isOverwrite, boolean logicCopy) {
-        if (!(targetFolder.getIsDir() && !source.getIsDir())) {
-            return null;
+    public boolean copyFileObject(FileObject source, FileObject targetFolder, boolean isOverwrite, boolean logicCopy) {
+        if (!targetFolder.getIsDir()) {
+            return false;
         }
         if (!FileUtil.exist(source.getRealPath()) || !FileUtil.exist(targetFolder.getRealPath())) {
-            return null;
+            return false;
         }
         File src = new File(source.getRealPath());
         File target = new File(targetFolder.getRealPath());
-        if (!(FileUtil.isFile(src) && FileUtil.isDirectory(target))) {
-            return null;
+        if (!FileUtil.isDirectory(target)) {
+            return false;
         }
-        FileObject fileObject = new FileObject();
-        BeanUtil.copyProperties(source, fileObject);
-        fileObject.setCreateTime(LocalDateTime.now());
-        fileObject.setUpdateTime(null);
-        fileObject.setBucketsId(targetFolder.getBucketsId());
-        if (logicCopy) {
-            //逻辑拷贝
-            fileObject.setFilePath(getPath(targetFolder.getFilePath(), source.getFileName()));
-        } else {
-            //物理拷贝
-            try {
-                File result = FileUtil.copy(src, target, isOverwrite);
-                if (!SecureUtil.md5(result).equals(source.getFileMd5())) {
-                    log.error("文件写入失败MD5不匹配");
-                    FileUtil.del(result);
-                    return null;
+        List<FileObject> fileList = fileObjectMapper.selectAllByStartPath(source.getFilePath());
+        for (FileObject object : fileList) {
+            object.setBucketsId(targetFolder.getBucketsId());
+            object.setCreateTime(LocalDateTime.now());
+            object.setId(null);
+            object.setUpdateTime(LocalDateTime.now());
+            object.setCreateUser(SessionInfo.getAndNull().getUid());
+            String filePath = object.getFilePath();
+            filePath = targetFolder.getFilePath() + filePath.substring(source.getFilePath().length());
+            object.setFilePath(filePath);
+        }
+        if (!logicCopy) {
+            //物理复制
+            Set<String> delRulePaths = new HashSet<>();
+            for (FileObject object : fileList) {
+                String realPath = object.getRealPath();
+                realPath = targetFolder.getRealPath() + realPath.substring(source.getRealPath().length());
+                if (FileUtil.exist(realPath)) {
+                    if (isOverwrite) {
+                        //如果覆盖
+                        delRulePaths.add(realPath);
+                    } else {
+                        //不覆盖
+                        realPath = null;
+                    }
                 }
-                fileObject.setRealPath(result.getAbsolutePath());
-                fileObject.setFilePath(getPath(targetFolder.getFilePath(), source.getFileName()));
-                return fileObject;
-            } catch (Exception e) {
-                log.error("文件写入失败为NULL");
-                return null;
+                object.setRealPath(realPath);
+            }
+            if (!delRulePaths.isEmpty()) {
+                fileObjectMapper.deleteByRealPathAndBucketsId(targetFolder.getBucketsId(), delRulePaths);
+            }
+            fileList = fileList.stream().filter(v -> StrUtil.isNotBlank(v.getRealPath())).toList();
+            FileUtil.copy(src, target, isOverwrite);
+        }
+        fileList.forEach(fileObjectMapper::insert);
+        return true;
+    }
+
+
+    /**
+     * 文件重命名
+     *
+     * @param fileObject
+     * @param newName
+     * @return
+     */
+    public boolean renameFile(FileObject fileObject, String newName) {
+        File file = new File(fileObject.getRealPath());
+        if (!file.exists()) {
+            return false;
+        }
+        if (file.getName().equals(newName)) {
+            return false;
+        }
+        if (new File(file.getParentFile(), newName).exists()) {
+            return false;
+        }
+        File target = FileUtil.rename(file, newName, true);
+
+        String filePath = fileObject.getFilePath();
+        filePath = filePath.substring(0, filePath.lastIndexOf(DELIMITER) + 1) + file.getName();
+        String realPath = fileObject.getRealPath();
+
+        if (fileObject.getIsDir()) {
+            // 是目录
+            // 查询子文件列表
+            List<FileObject> list = fileObjectMapper.selectAllByStartPath(fileObject.getFilePath());
+            for (FileObject object : list) {
+                if (object.getId().equals(fileObject.getId())) {
+                    continue;
+                }
+                String itemFilePath = object.getFilePath();
+                String itemRealPath = object.getRealPath();
+                itemFilePath = filePath + itemFilePath.substring(fileObject.getFilePath().length());
+                itemRealPath = realPath + itemRealPath.substring(fileObject.getRealPath().length());
+                object.setFilePath(itemFilePath);
+                object.setRealPath(itemRealPath);
+                fileObjectMapper.updateById(object);
             }
         }
-        return null;
+
+        fileObject.setFileName(file.getName());
+        fileObject.setFilePath(filePath);
+        fileObject.setRealPath(target.getAbsolutePath());
+        fileObject.setUpdateUser(SessionInfo.getAndNull().getUid());
+        fileObject.setUpdateTime(LocalDateTime.now());
+        fileObjectMapper.updateById(fileObject);
+        return true;
     }
 
 
@@ -438,6 +523,7 @@ public class FileObjectService {
             throw new BizException(RespCode.FILE_ERROR);
         } finally {
             FileUtil.del(dir);
+            //删除记录表
             fileBlockRecordsMapper.deleteById(records.getId());
         }
     }
@@ -465,6 +551,20 @@ public class FileObjectService {
             block.setNumber(Integer.parseInt(n1));
             return block;
         }).toList();
+    }
+
+
+    /**
+     * 清理分块上传的临时目录文件
+     *
+     * @param records
+     */
+    public void cleanBlockTempFiles(FileBlockRecords records) {
+        File dir = new File(records.getDirPath());
+        if (!dir.exists() || !dir.isDirectory()) {
+            return;
+        }
+        FileUtil.del(dir);
     }
 
 

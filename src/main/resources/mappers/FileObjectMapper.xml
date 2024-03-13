@@ -6,6 +6,20 @@
         from t_file_object
         where buckets_id = #{bid}
     </delete>
+    <delete id="deleteAllByPath">
+        delete
+        from t_file_object
+        where file_path = #{path}
+           or file_path like concat(#{path}, '%')
+    </delete>
+    <delete id="deleteByRealPathAndBucketsId">
+        delete from t_file_object
+        where buckets_id = #{bid}
+        and real_path in
+        <foreach collection="paths" item="p" open="(" separator="," close=")">
+            #{p}
+        </foreach>
+    </delete>
 
     <select id="getListByBucketId" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
         select *
@@ -18,5 +32,37 @@
         where buckets_id = #{bid}
           and file_path = '/'
         limit 1
+    </select>
+    <select id="searchFileObject" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
+        select *
+        from t_file_object
+        where is_delete = 0
+        and buckets_id = #{bucketId}
+        and parent_id = #{parentId}
+        <if test="searchName neq null and searchName neq ''">
+            and file_name like concat('%',#{searchName},'%')
+        </if>
+        <if test="gotoPath neq null and gotoPath neq ''">
+            and file_path = #{gotoPath} and is_dir = 1
+        </if>
+        <if test="fileType neq null and fileType.length > 0">
+            and file_content_type in
+            <foreach collection="fileType" item="ft" open="(" separator="," close=")">
+                #{ft}
+            </foreach>
+        </if>
+    </select>
+    <select id="getByIdNoDel" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
+        select *
+        from t_file_object
+        where id = #{id}
+          and is_delete = 0
+        limit 1
+    </select>
+    <select id="selectAllByStartPath" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
+        select *
+        from t_file_object
+        where is_delete = 0
+          and (file_path = #{path} or file_path like concat(#{path}, '%'))
     </select>
 </mapper>

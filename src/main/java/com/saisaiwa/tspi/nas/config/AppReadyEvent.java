@@ -1,6 +1,6 @@
 package com.saisaiwa.tspi.nas.config;
 
-import com.saisaiwa.tspi.nas.common.file.FileLocalScanTask;
+import com.saisaiwa.tspi.nas.common.file.FileLocalScanService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -18,16 +18,25 @@ import org.springframework.stereotype.Component;
 public class AppReadyEvent {
 
     @Resource
-    private FileLocalScanTask fileLocalScanTask;
+    private FileLocalScanService fileLocalScanService;
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationStarted() {
-        log.info("初始化\n1. 扫描本地文件改动并同步...");
-        fileLocalScanTask.scanAllBuckets();
-        log.info("扫描同步成功！\n2. 开启文件监听...");
+        log.info("1. 初始化磁盘挂载…………");
+        //todo
+        log.info(" -磁盘挂载初始化完成！");
+
+        log.info("2. 开始扫描差异文件并同步…………");
+        fileLocalScanService.scanAllBuckets();
+        log.info(" -同步完成！");
+
+        log.info("3. 启动磁盘文件监听器…………");
         //启动文件监听
-        fileLocalScanTask.initListener();
-        log.info("文件监听开启成功");
+        fileLocalScanService.initListener();
+        log.info(" -文件监听开启成功");
+
+
+        log.info("******》》》系统启动成功《《《******");
     }
 
 }

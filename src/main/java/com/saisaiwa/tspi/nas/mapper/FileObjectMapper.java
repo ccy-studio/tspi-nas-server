@@ -2,7 +2,10 @@ package com.saisaiwa.tspi.nas.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.saisaiwa.tspi.nas.domain.entity.FileObject;
+import com.saisaiwa.tspi.nas.domain.file.FObjectSearch;
+import org.apache.ibatis.annotations.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -25,6 +28,7 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
 
     /**
      * 删除全部文件根据桶id
+     *
      * @param bid
      */
     void deleteByBucketsId(Long bid);
@@ -37,4 +41,45 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
      * @return
      */
     FileObject getRootObject(Long bid);
+
+    /**
+     * 查询|搜索文件列表
+     *
+     * @param search
+     * @return
+     */
+    List<FileObject> searchFileObject(FObjectSearch search);
+
+    /**
+     * 根据ID查询
+     *
+     * @param id
+     * @return
+     */
+    FileObject getByIdNoDel(Long id);
+
+    /**
+     * 删除一个文件如果是目录则一同删除目录下的所有文件
+     *
+     * @param path
+     * @return
+     */
+    int deleteAllByPath(String path);
+
+    /**
+     * 查询文件根据路径前缀（包含）
+     *
+     * @param path
+     * @return
+     */
+    List<FileObject> selectAllByStartPath(String path);
+
+    /**
+     * 删除-根据桶id和满足的realPath
+     *
+     * @param bid
+     * @param paths
+     * @return
+     */
+    int deleteByRealPathAndBucketsId(@Param("bid") Long bid, @Param("paths") Collection<String> paths);
 }

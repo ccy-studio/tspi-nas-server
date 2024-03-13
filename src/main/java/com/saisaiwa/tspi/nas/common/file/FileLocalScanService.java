@@ -2,6 +2,7 @@ package com.saisaiwa.tspi.nas.common.file;
 
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.saisaiwa.tspi.nas.domain.entity.Buckets;
@@ -16,11 +17,10 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  * @description:
@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  **/
 @Component
 @Slf4j
-public class FileLocalScanTask {
+public class FileLocalScanService {
 
     @Resource
     private BucketsMapper bucketsMapper;
@@ -38,13 +38,13 @@ public class FileLocalScanTask {
     private FileObjectMapper fileObjectMapper;
 
     @Resource
-    private FileObjectService fileObjectService;
+    private FileNativeService fileNativeService;
 
     private final FileAlterationMonitor monitor;
 
     private final Map<Buckets, FileAlterationObserver> observerMap = new ConcurrentHashMap<>();
 
-    public FileLocalScanTask() {
+    public FileLocalScanService() {
         this.monitor = new FileAlterationMonitor(1000);
     }
 
@@ -55,6 +55,9 @@ public class FileLocalScanTask {
     public void initListener() {
         List<Buckets> buckets = bucketsMapper.selectList(Wrappers.lambdaQuery(Buckets.class)
                 .eq(Buckets::getIsDelete, 0));
+        if (buckets.isEmpty()) {
+            return;
+        }
         buckets.forEach(this::addListener);
         startListenerAll();
     }
@@ -65,7 +68,28 @@ public class FileLocalScanTask {
     public void scanAllBuckets() {
         List<Buckets> buckets = bucketsMapper.selectList(Wrappers.lambdaQuery(Buckets.class)
                 .eq(Buckets::getIsDelete, 0));
-        buckets.forEach(this::scanFileDiffAndFix);
+        if (buckets.isEmpty()) {
+            return;
+        }
+        List<Future<Boolean>> futures = new ArrayList<>();
+        log.info("ScanAllBucket DifferentFile");
+        buckets.forEach(v -> {
+            Future<Boolean> future = ThreadUtil.execAsync(() -> {
+                scanFileDiffAndFix(v);
+                return true;
+            });
+            futures.add(future);
+        });
+        log.info("ScanAllBucket TaskCount{}", futures.size());
+        for (int i = 0; i < futures.size(); i++) {
+            try {
+                futures.get(i).get();
+                log.info("ScanAllBucket Item Done「{}」", i + 1);
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        log.info("ScanAllBucket Successful");
     }
 
     public void stopListenerAll() {
@@ -94,6 +118,11 @@ public class FileLocalScanTask {
      */
     public void addListener(Buckets buckets) {
         if (!observerMap.containsKey(buckets)) {
+            File file = new File(buckets.getMountPoint());
+            if (!file.exists() || !file.isDirectory()) {
+                log.error("无法给Bucket-{}添加监听器,因为文件不存在", buckets.getBucketsName());
+                return;
+            }
             FileAlterationObserver observer = new FileAlterationObserver(new File(buckets.getMountPoint()));
             observer.addListener(new FileListener(buckets));
             observerMap.put(buckets, observer);
@@ -121,7 +150,7 @@ public class FileLocalScanTask {
     public void scanFileDiffAndFix(Buckets buckets) {
         File file = new File(buckets.getMountPoint());
         if (!file.exists() || !file.isDirectory()) {
-            log.error("scanFileDiffAndFix 此bucket被移除文件不存在");
+            log.error("scanFileDiffAndFix 此bucket（{}）被移除，因为文件不存在", buckets.getBucketsName());
             buckets.setIsDelete(buckets.getId());
             buckets.setUpdateTime(LocalDateTime.now());
             bucketsMapper.updateById(buckets);
@@ -135,8 +164,34 @@ public class FileLocalScanTask {
         }
         //查询数据库中的文件
         List<FileObject> dbFileObjects = fileObjectMapper.getListByBucketId(buckets.getId());
+        final List<Long> delIds = new ArrayList<>();
+        // 查询是否被删除了
+        for (FileObject object : dbFileObjects) {
+            if (!FileUtil.exist(object.getRealPath())) {
+                delIds.add(object.getId());
+            }
+        }
+        if (!delIds.isEmpty()) {
+            fileObjectMapper.deleteBatchIds(delIds);
+            // 移除被删掉的数据
+            dbFileObjects.removeIf(v -> delIds.contains(v.getId()));
+        }
+
         FileObject rootObject = fileObjectMapper.getRootObject(buckets.getId());
         updateLopFile(files, dbFileObjects, rootObject);
+        //更新数组内的逻辑
+        delIds.clear();
+        delIds.addAll(dbFileObjects.parallelStream()
+                .filter(v -> v.getIsDelete() != 0 && v.getId() != null)
+                .map(FileObject::getId)
+                .toList());
+        fileObjectMapper.deleteBatchIds(delIds);
+        log.info("Bucket：{} 删除{}个", buckets.getBucketsName(), delIds.size());
+
+        List<FileObject> saveList = dbFileObjects.parallelStream().filter(v -> v.getId() == null && v.getIsDelete() == 0)
+                .toList();
+        saveList.forEach(fileObjectMapper::insert);
+        log.info("Bucket：{} 新增{}个", buckets.getBucketsName(), saveList.size());
     }
 
     /**
@@ -221,7 +276,7 @@ public class FileLocalScanTask {
                         insertFile.setFileName(f.getName());
                         insertFile.setParentId(search.get().getId());
                         insertFile.setBucketsId(search.get().getBucketsId());
-                        insertFile.setFilePath(fileObjectService.getPath(search.get().getFilePath(), f.getName()));
+                        insertFile.setFilePath(fileNativeService.getPath(search.get().getFilePath(), f.getName()));
                         insertFile.setRealPath(f.getAbsolutePath());
                         insertFile.setIsDir(false);
                         insertFile.setFileContentType(FileUtil.extName(f));
@@ -245,7 +300,7 @@ public class FileLocalScanTask {
         fileObject.setFileName(file.getName());
         fileObject.setParentId(parent.getParentId());
         fileObject.setBucketsId(parent.getBucketsId());
-        fileObject.setFilePath(fileObjectService.getPath(parent.getFilePath(), file.getName()));
+        fileObject.setFilePath(fileNativeService.getPath(parent.getFilePath(), file.getName()));
         fileObject.setRealPath(file.getAbsolutePath());
         fileObject.setIsDir(true);
         fileObject.setIsDelete(0L);

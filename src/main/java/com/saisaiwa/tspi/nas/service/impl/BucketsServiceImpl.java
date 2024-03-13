@@ -6,12 +6,13 @@ import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
+import com.saisaiwa.tspi.nas.common.file.FileLocalScanService;
+import com.saisaiwa.tspi.nas.common.file.FileNativeService;
 import com.saisaiwa.tspi.nas.domain.convert.BucketsConvert;
 import com.saisaiwa.tspi.nas.domain.dto.BucketsExtDto;
 import com.saisaiwa.tspi.nas.domain.dto.BucketsPremissDto;
 import com.saisaiwa.tspi.nas.domain.dto.PoliciesRuleExtDto;
 import com.saisaiwa.tspi.nas.domain.entity.Buckets;
-import com.saisaiwa.tspi.nas.domain.entity.FileObject;
 import com.saisaiwa.tspi.nas.domain.entity.PoliciesRule;
 import com.saisaiwa.tspi.nas.domain.entity.Resources;
 import com.saisaiwa.tspi.nas.domain.enums.BucketsACLEnum;
@@ -27,7 +28,6 @@ import com.saisaiwa.tspi.nas.domain.vo.BucketsDetailVo;
 import com.saisaiwa.tspi.nas.domain.vo.BucketsInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.BucketsPermissionUserVo;
 import com.saisaiwa.tspi.nas.mapper.BucketsMapper;
-import com.saisaiwa.tspi.nas.mapper.FileObjectMapper;
 import com.saisaiwa.tspi.nas.mapper.PoliciesRuleMapper;
 import com.saisaiwa.tspi.nas.mapper.UserMapper;
 import com.saisaiwa.tspi.nas.service.BucketsService;
@@ -59,7 +59,10 @@ public class BucketsServiceImpl implements BucketsService {
     private UserMapper userMapper;
 
     @Resource
-    private FileObjectMapper fileObjectMapper;
+    private FileNativeService fileNativeService;
+
+    @Resource
+    private FileLocalScanService localScanTask;
 
     /**
      * 创建或者修改存储桶
@@ -89,7 +92,9 @@ public class BucketsServiceImpl implements BucketsService {
             policiesRule.setUserId(SessionInfo.get().getUid());
             policiesRule.setCreateUser(SessionInfo.get().getUid());
             policiesRuleMapper.insert(policiesRule);
-            //todo 路径文件新建
+            //新建存储桶
+            fileNativeService.createBuckets(buckets);
+            localScanTask.addListener(buckets);
         } else {
             //部分字段修改
             Buckets dbBuckets = bucketsMapper.selectById(req.getId());
@@ -124,11 +129,13 @@ public class BucketsServiceImpl implements BucketsService {
     public void deleteBucketById(Long bid) {
         Buckets buckets = bucketsMapper.selectById(bid);
         Assert.notNull(buckets);
-        List<FileObject> files = fileObjectMapper.getListByBucketId(bid);
-        //todo 处理删除的逻辑
         if (bucketsMapper.deleteById(bid) <= 0) {
             throw new BizException(RespCode.ERROR);
         }
+        //移除监听器
+        localScanTask.removeListener(buckets);
+        //删除
+        fileNativeService.deleteBuckets(buckets);
     }
 
 

@@ -42,6 +42,7 @@
                 (bk.permissions != 0 and bk.permissions_scope = 1 and ugb.user_id = #{uid})
                 )
             </if>
+            and bk.is_delete = 0
         </where>
         group by bk.id
     </select>
