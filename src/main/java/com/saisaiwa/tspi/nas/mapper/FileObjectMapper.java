@@ -19,6 +19,14 @@ import java.util.List;
 public interface FileObjectMapper extends BaseMapper<FileObject> {
 
     /**
+     * 查询一个根据文件名称和父ID
+     * @param fileName
+     * @param pid
+     * @return
+     */
+    FileObject getByFileNameAndParentId(String fileName,Long pid);
+
+    /**
      * 查询全部根据存储桶id
      *
      * @param bid

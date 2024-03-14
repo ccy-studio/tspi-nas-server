@@ -1,6 +1,8 @@
 package com.saisaiwa.tspi.nas.domain.convert;
 
+import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.entity.FileObject;
+import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -23,4 +25,7 @@ public interface FileObjectConvert {
     FileObjectInfoVo toFileObjectInfoVo(FileObject object);
 
     List<FileObjectInfoVo> toFileObjectInfoVo(List<FileObject> object);
+
+
+    FileBlockInfoVo toFileBlockInfoVo(FileBlockRecords records);
 }

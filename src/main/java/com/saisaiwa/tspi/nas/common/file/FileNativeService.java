@@ -2,7 +2,6 @@ package com.saisaiwa.tspi.nas.common.file;
 
 import cn.hutool.core.io.FastByteBuffer;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
@@ -16,10 +15,13 @@ import com.saisaiwa.tspi.nas.mapper.FileBlockRecordsMapper;
 import com.saisaiwa.tspi.nas.mapper.FileObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -40,6 +42,8 @@ public class FileNativeService {
 
     @Resource
     private FileBlockRecordsMapper fileBlockRecordsMapper;
+
+    private final Tika tika = new Tika();
 
     public static final String DELIMITER = "/";
 
@@ -137,37 +141,54 @@ public class FileNativeService {
     /**
      * 输出文件流
      *
-     * @param fileObject   文件对象
-     * @param outputStream 输出流
-     * @param autoClose    自动关闭
+     * @param fileObject 文件对象
      */
-    public void writeOutputFileStream(FileObject fileObject, OutputStream outputStream, boolean autoClose) {
-        String filePath = fileObject.getRealPath();
-        if (!FileUtil.exist(filePath)) {
-            if (autoClose) {
-                try {
-                    outputStream.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+    public FileGetNativeInfo writeOutputFileStream(FileObject fileObject, String range) {
+        File file = new File(fileObject.getRealPath());
+        long start = 0;
+        long end = file.length() - 1;
+
+        if (range != null && range.startsWith("bytes=")) {
+            String[] rangeValues = range.substring(6).split("-");
+            start = Long.parseLong(rangeValues[0]);
+            if (rangeValues.length > 1 && !rangeValues[1].isEmpty()) {
+                end = Long.parseLong(rangeValues[1]);
             }
-            throw new BizException(RespCode.FILE_ERROR);
         }
-        FileInputStream inputStream = null;
+
         try {
-            inputStream = new FileInputStream(filePath);
-            IoUtil.copy(inputStream, outputStream);
-        } catch (FileNotFoundException e) {
-            log.error("writeOutputFileStream Error", e);
-            throw new BizException(RespCode.FILE_ERROR);
-        } finally {
-            IoUtil.close(inputStream);
-            if (autoClose) {
-                if (outputStream != null) {
-                    IoUtil.close(outputStream);
-                }
-            }
+            FileRangeInputStream stream = new FileRangeInputStream(file, start, end);
+            return new FileGetNativeInfo(stream, (end - start + 1), start, end, file.length());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 新建文件夹
+     *
+     * @param fileObject
+     * @param targetObject
+     * @param isOverwrite
+     * @return
+     */
+    public boolean createFolderFileObject(FileObject fileObject, FileObject targetObject, boolean isOverwrite) {
+        if (!targetObject.getIsDir()) {
+            return false;
+        }
+        File tf = new File(targetObject.getRealPath());
+        if (!tf.exists()) {
+            return false;
+        }
+        File file = new File(tf, fileObject.getFileName());
+        if (file.exists() && !isOverwrite) {
+            return false;
+        }
+        fileObject.setRealPath(file.getAbsolutePath());
+        fileObject.setFilePath(getPath(targetObject.getFilePath(), fileObject.getFileName()));
+        fileObject.setIsDir(true);
+        fileObject.setParentId(targetObject.getId());
+        return file.mkdir();
     }
 
     /**
@@ -213,7 +234,17 @@ public class FileNativeService {
         fileObject.setRealPath(target.getAbsolutePath());
         fileObject.setFileMd5(md5);
         fileObject.setFileSize(FileUtil.size(target, true));
-        fileObject.setFileContentType(FileUtil.extName(target));
+        fileObject.setParentId(targetFolder.getId());
+        fileObject.setCreateTime(LocalDateTime.now());
+        fileObject.setCreateUser(SessionInfo.getAndNull().getUid());
+        fileObject.setBucketsId(targetFolder.getBucketsId());
+        try {
+            fileObject.setFileContentType(tika.detect(target));
+        } catch (IOException e) {
+            log.error("获取文件ContentType错误", e);
+            fileObject.setFileContentType("application/octet-stream");
+        }
+
     }
 
 
@@ -259,6 +290,9 @@ public class FileNativeService {
         List<FileObject> list = fileObjectMapper.selectAllByStartPath(sourceFileObject.getFilePath());
         Set<String> delRealPaths = new HashSet<>();
         for (FileObject object : list) {
+            if (object.getId().equals(sourceFileObject.getId())) {
+                object.setParentId(targetFolder.getId());
+            }
             object.setBucketsId(targetFolder.getBucketsId());
             object.setCreateUser(SessionInfo.getAndNull().getUid());
             object.setCreateTime(LocalDateTime.now());
@@ -273,6 +307,9 @@ public class FileNativeService {
                 if (autoOverwrite) {
                     delRealPaths.add(realPath);
                 } else {
+                    if (object.getId().equals(sourceFileObject.getId())) {
+                        return false;
+                    }
                     realPath = null;
                 }
             }
@@ -345,6 +382,9 @@ public class FileNativeService {
                         delRulePaths.add(realPath);
                     } else {
                         //不覆盖
+                        if (object.getId().equals(source.getId())) {
+                            return false;
+                        }
                         realPath = null;
                     }
                 }
@@ -475,9 +515,9 @@ public class FileNativeService {
         }
         File tempTarget = new File(dir, records.getFileName());
         File[] dirList = dir.listFiles();
-        if (dirList == null) {
-            log.error("fileBlockMargin list为空");
-            throw new BizException(RespCode.FILE_ERROR);
+        if (dirList == null || dirList.length != records.getBlockCount()) {
+            log.error("fileBlockMargin 物理文件数量不匹配");
+            throw new BizException(RespCode.FILE_ERROR, "分块数量不足");
         }
         //排序文件
         List<File> filesList = Arrays.asList(dirList);
@@ -509,7 +549,6 @@ public class FileNativeService {
             File result = FileUtil.copy(tempTarget, new File(parentFileObject.getRealPath()), true);
             resultFileObject.setBucketsId(parentFileObject.getBucketsId());
             resultFileObject.setFileName(result.getName());
-            resultFileObject.setFileContentType(FileUtil.extName(result));
             resultFileObject.setFilePath(getPath(parentFileObject.getFilePath(), result.getName()));
             resultFileObject.setRealPath(result.getAbsolutePath());
             resultFileObject.setFileSize(FileUtil.size(result));
@@ -517,6 +556,14 @@ public class FileNativeService {
             resultFileObject.setIsDir(false);
             resultFileObject.setParentId(parentFileObject.getId());
             resultFileObject.setCreateTime(LocalDateTime.now());
+            resultFileObject.setCreateUser(records.getCreateUser());
+            try {
+                resultFileObject.setFileContentType(tika.detect(result));
+            } catch (IOException e) {
+                log.error("获取文件ContentType错误", e);
+                resultFileObject.setFileContentType("application/octet-stream");
+            }
+            fileObjectMapper.insert(resultFileObject);
             return resultFileObject;
         } catch (Exception e) {
             log.error("fileBlockMerge 文件合并失败", e);

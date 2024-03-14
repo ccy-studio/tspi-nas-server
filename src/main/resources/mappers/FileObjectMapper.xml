@@ -65,4 +65,12 @@
         where is_delete = 0
           and (file_path = #{path} or file_path like concat(#{path}, '%'))
     </select>
+    <select id="getByFileNameAndParentId" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
+        select *
+        from t_file_object
+        where parent_id = #{pid}
+          and file_name = #{fileName}
+          and is_delete = 0
+        limit 1
+    </select>
 </mapper>

@@ -13,9 +13,11 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.monitor.FileAlterationMonitor;
 import org.apache.commons.io.monitor.FileAlterationObserver;
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +43,8 @@ public class FileLocalScanService {
     private FileNativeService fileNativeService;
 
     private final FileAlterationMonitor monitor;
+
+    private final Tika tika = new Tika();
 
     private final Map<Buckets, FileAlterationObserver> observerMap = new ConcurrentHashMap<>();
 
@@ -279,11 +283,16 @@ public class FileLocalScanService {
                         insertFile.setFilePath(fileNativeService.getPath(search.get().getFilePath(), f.getName()));
                         insertFile.setRealPath(f.getAbsolutePath());
                         insertFile.setIsDir(false);
-                        insertFile.setFileContentType(FileUtil.extName(f));
                         insertFile.setFileSize(FileUtil.size(f, true));
                         insertFile.setFileMd5(SecureUtil.md5(f));
                         insertFile.setIsDelete(0L);
                         insertFile.setCreateTime(LocalDateTime.now());
+                        try {
+                            insertFile.setFileContentType(tika.detect(f));
+                        } catch (IOException e) {
+                            log.error("获取文件ContentType错误", e);
+                            insertFile.setFileContentType("application/octet-stream");
+                        }
                         fileObjectMapper.insert(insertFile);
                         dbFileObjects.add(insertFile);
                     }
