@@ -1,6 +1,5 @@
 package com.saisaiwa.tspi.nas.domain.file;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,7 +15,6 @@ public class FBaseEntity {
     /**
      * 桶ID
      */
-    @NotNull
     private Long bucketId;
 
     /**

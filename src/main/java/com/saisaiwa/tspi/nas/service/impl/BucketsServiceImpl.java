@@ -247,6 +247,9 @@ public class BucketsServiceImpl implements BucketsService {
     @Override
     public BucketsPermissionUserVo getPermissionByUser(Long bucketsId, Long uid) {
         BucketsPremissDto dto = bucketsMapper.selectBucketsPremissByUid(bucketsId, uid);
+        if (dto == null) {
+            return null;
+        }
         BucketsPermissionUserVo vo = new BucketsPermissionUserVo();
         vo.setBucketsId(bucketsId);
         List<String> actions = StrUtil.split(dto.getAction(), ";");

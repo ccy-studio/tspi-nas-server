@@ -25,6 +25,7 @@ import com.saisaiwa.tspi.nas.mapper.FileObjectShareMapper;
 import com.saisaiwa.tspi.nas.service.FileObjectService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,7 +89,9 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!fileNativeService.deleteFileObject(fileObject)) {
             throw new BizException("删除失败");
         }
-        fileObjectMapper.deleteAllByPath(fileObject.getFilePath());
+        fileNativeService.lockAccept(dat.getBucketId(), v -> {
+            fileObjectMapper.deleteAllByFilePathAndStartWith(fileObject.getFilePath());
+        });
     }
 
 
@@ -115,9 +118,11 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!targetObject.getIsDir()) {
             throw new FileObjectNotFound();
         }
-        if (!fileNativeService.copyFileObject(fileObject, targetObject, dat.getIsOverwrite(), false)) {
-            throw new BizException("复制失败");
-        }
+        fileNativeService.lockAccept(dat.getBucketId(), v -> {
+            if (!v.copyFileObject(fileObject, targetObject, dat.getIsOverwrite(), false)) {
+                throw new BizException("复制失败");
+            }
+        });
     }
 
 
@@ -144,9 +149,11 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!targetObject.getIsDir()) {
             throw new FileObjectNotFound();
         }
-        if (!fileNativeService.moveFileObject(fileObject, targetObject, dat.getIsOverwrite())) {
-            throw new BizException("移动失败");
-        }
+        fileNativeService.lockAccept(dat.getBucketId(), v -> {
+            if (!v.moveFileObject(fileObject, targetObject, dat.getIsOverwrite())) {
+                throw new BizException("移动失败");
+            }
+        });
     }
 
 
@@ -162,9 +169,11 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!dat.getBucketId().equals(fileObject.getBucketsId())) {
             throw new FileObjectNotFound();
         }
-        if (!fileNativeService.renameFile(fileObject, dat.getNewName())) {
-            throw new BizException("重命名失败");
-        }
+        fileNativeService.lockAccept(dat.getBucketId(), v -> {
+            if (!fileNativeService.renameFile(fileObject, dat.getNewName())) {
+                throw new BizException("重命名失败");
+            }
+        });
     }
 
     /**
@@ -176,7 +185,7 @@ public class FileObjectServiceImpl implements FileObjectService {
     public void createFolder(FObjectUpload dat) {
         FileObject targetObject = fileObjectMapper.getByIdNoDel(dat.getTargetFolder());
         Assert.notNull(targetObject);
-        if (targetObject.getBucketsId().equals(dat.getBucketId())) {
+        if (!targetObject.getBucketsId().equals(dat.getBucketId())) {
             throw new FileObjectNotFound();
         }
         FileObject fileObject = new FileObject();
@@ -185,7 +194,9 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!fileNativeService.createFolderFileObject(fileObject, targetObject, dat.getIsOverwrite())) {
             throw new FileObjectNotFound();
         }
-        fileObjectMapper.insert(fileObject);
+        fileNativeService.lockAccept(dat.getBucketId(), v -> {
+            fileObjectMapper.insert(fileObject);
+        });
     }
 
     /**
@@ -197,11 +208,13 @@ public class FileObjectServiceImpl implements FileObjectService {
     @Override
     public boolean hasFile(FObjectHas has) {
         FileObject targetObject = fileObjectMapper.getByIdNoDel(has.getTargetObject());
-        Assert.notNull(targetObject);
+        if (targetObject == null) {
+            throw new FileObjectNotFound();
+        }
         FileObject object = fileObjectMapper.getByFileNameAndParentId(has.getFileName(), has.getTargetObject());
         if (object != null && !fileNativeService.has(object.getRealPath())) {
             //发现数据不存在
-            fileObjectMapper.deleteAllByPath(object.getFilePath());
+            fileObjectMapper.deleteAllByFilePathAndStartWith(object.getFilePath());
             return false;
         }
         return object != null;
@@ -217,11 +230,15 @@ public class FileObjectServiceImpl implements FileObjectService {
     @Override
     public void uploadFileSign(MultipartFile file, FObjectUpload dat) {
         FileObject targetObject = fileObjectMapper.getByIdNoDel(dat.getTargetFolder());
-        Assert.notNull(targetObject);
-        if (fileObjectMapper.getByFileNameAndParentId(dat.getFileName(), targetObject.getId()) != null) {
+        if (targetObject == null) {
+            throw new FileObjectNotFound();
+        }
+        if (fileObjectMapper.getByFileNameAndParentId(dat.getFileName(), targetObject.getId()) != null
+                && !dat.getIsOverwrite()) {
+            // 文件存在且又不允许覆盖那么就自动重命名一下
             dat.setFileName(IdUtil.simpleUUID().concat("_".concat(dat.getFileName())));
         }
-        if (targetObject.getBucketsId().equals(dat.getBucketId())) {
+        if (!targetObject.getBucketsId().equals(dat.getBucketId())) {
             throw new FileObjectNotFound();
         }
         FileObject fileObject = new FileObject();
@@ -314,10 +331,10 @@ public class FileObjectServiceImpl implements FileObjectService {
      * @param dat dat
      * @return {@link ResponseEntity}<{@link FileRangeInputStream}>
      */
-    public ResponseEntity<FileRangeInputStream> getFileObjectStream(FObjectGet dat, String range) {
+    @Override
+    public ResponseEntity<InputStreamResource> getFileObjectStream(FObjectGet dat, String range) {
         FileObject targetObject = fileObjectMapper.getByIdNoDel(dat.getObjectId());
-        Assert.notNull(targetObject);
-        if (!fileNativeService.has(targetObject.getRealPath())) {
+        if (targetObject == null || targetObject.getIsDir() || !fileNativeService.has(targetObject.getRealPath())) {
             throw new FileObjectNotFound();
         }
         HttpStatusCode statusCode = HttpStatus.OK;
@@ -336,7 +353,7 @@ public class FileObjectServiceImpl implements FileObjectService {
         }
         return ResponseEntity.status(statusCode)
                 .headers(headers)
-                .body(fileGetNativeInfo.getInputStream());
+                .body(new InputStreamResource(fileGetNativeInfo.getInputStream()));
     }
 
 }

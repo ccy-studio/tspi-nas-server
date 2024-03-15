@@ -5,6 +5,8 @@ import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.file.*;
 import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -36,4 +38,6 @@ public interface FileObjectService {
     FileBlockInfoVo uploadFileBlock(MultipartFile file, FObjectUploadBlock dat);
 
     FileObjectInfoVo fileBlockMerge(Long blockId);
+
+    ResponseEntity<InputStreamResource> getFileObjectStream(FObjectGet dat, String range);
 }

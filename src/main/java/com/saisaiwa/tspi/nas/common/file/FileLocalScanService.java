@@ -19,10 +19,14 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @description:
@@ -59,11 +63,11 @@ public class FileLocalScanService {
     public void initListener() {
         List<Buckets> buckets = bucketsMapper.selectList(Wrappers.lambdaQuery(Buckets.class)
                 .eq(Buckets::getIsDelete, 0));
+        startListenerAll();
         if (buckets.isEmpty()) {
             return;
         }
         buckets.forEach(this::addListener);
-        startListenerAll();
     }
 
     /**
@@ -105,14 +109,27 @@ public class FileLocalScanService {
     }
 
     public void startListenerAll() {
-        if (observerMap.isEmpty()) {
-            return;
-        }
         try {
             monitor.start();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 获取锁
+     *
+     * @param bucketId bucket id
+     * @return {@link ReentrantLock}
+     */
+    public ReentrantLock getLock(Long bucketId) {
+        for (Map.Entry<Buckets, FileAlterationObserver> entry : observerMap.entrySet()) {
+            if (entry.getKey().getId().equals(bucketId)) {
+                FileListener fileListener = (FileListener) entry.getValue().getListeners().iterator().next();
+                return fileListener.getLock();
+            }
+        }
+        return null;
     }
 
     /**
@@ -155,11 +172,10 @@ public class FileLocalScanService {
         File file = new File(buckets.getMountPoint());
         if (!file.exists() || !file.isDirectory()) {
             log.error("scanFileDiffAndFix 此bucket（{}）被移除，因为文件不存在", buckets.getBucketsName());
-            buckets.setIsDelete(buckets.getId());
-            buckets.setUpdateTime(LocalDateTime.now());
-            bucketsMapper.updateById(buckets);
+            bucketsMapper.deleteById(buckets.getId());
             return;
         }
+        //文件是存在的
         File[] files = file.listFiles();
         if (files == null || files.length == 0) {
             //空文件夹
@@ -171,6 +187,9 @@ public class FileLocalScanService {
         final List<Long> delIds = new ArrayList<>();
         // 查询是否被删除了
         for (FileObject object : dbFileObjects) {
+            if (object.getFilePath().equals(FileNativeService.DELIMITER)) {
+                continue;
+            }
             if (!FileUtil.exist(object.getRealPath())) {
                 delIds.add(object.getId());
             }
@@ -180,22 +199,29 @@ public class FileLocalScanService {
             // 移除被删掉的数据
             dbFileObjects.removeIf(v -> delIds.contains(v.getId()));
         }
+        if (dbFileObjects.isEmpty()) {
+            return;
+        }
 
         FileObject rootObject = fileObjectMapper.getRootObject(buckets.getId());
         updateLopFile(files, dbFileObjects, rootObject);
         //更新数组内的逻辑
         delIds.clear();
         delIds.addAll(dbFileObjects.parallelStream()
-                .filter(v -> v.getIsDelete() != 0 && v.getId() != null)
+                .filter(v -> v.getIsDelete() != 0 && v.getId() != null && !v.getFilePath().equals(FileNativeService.DELIMITER))
                 .map(FileObject::getId)
                 .toList());
-        fileObjectMapper.deleteBatchIds(delIds);
-        log.info("Bucket：{} 删除{}个", buckets.getBucketsName(), delIds.size());
+        if (!delIds.isEmpty()) {
+            fileObjectMapper.deleteBatchIds(delIds);
+            log.info("Bucket：{} 删除{}个", buckets.getBucketsName(), delIds.size());
+        }
 
         List<FileObject> saveList = dbFileObjects.parallelStream().filter(v -> v.getId() == null && v.getIsDelete() == 0)
                 .toList();
-        saveList.forEach(fileObjectMapper::insert);
-        log.info("Bucket：{} 新增{}个", buckets.getBucketsName(), saveList.size());
+        if (!saveList.isEmpty()) {
+            log.info("Bucket：{} 新增{}个", buckets.getBucketsName(), saveList.size());
+            saveList.forEach(fileObjectMapper::insert);
+        }
     }
 
     /**
@@ -218,9 +244,10 @@ public class FileLocalScanService {
                     File[] dirFiles = f.listFiles();
                     if (dirFiles == null || dirFiles.length == 0) {
                         //如果这个目录下没有任何的文件
-                        //删除这个目录下所有的子文件
+                        //删除这个目录下所有的子文件但是不包含自身
                         for (FileObject object : dbFileObjects) {
-                            if (object.getRealPath().startsWith(f.getAbsolutePath())) {
+                            if (object.getRealPath().startsWith(f.getAbsolutePath())
+                                    && !object.getRealPath().equals(f.getAbsolutePath())) {
                                 object.setIsDelete(object.getId());
                             }
                         }
@@ -230,7 +257,7 @@ public class FileLocalScanService {
                     }
                 } else {
                     //不存在的目录
-                    //要反推一致找到
+                    //要反推一直找到
                     File tf = f;
                     List<File> fArr = new ArrayList<>();
                     FileObject insertObject = null;
@@ -307,7 +334,7 @@ public class FileLocalScanService {
         }
         FileObject fileObject = new FileObject();
         fileObject.setFileName(file.getName());
-        fileObject.setParentId(parent.getParentId());
+        fileObject.setParentId(Optional.ofNullable(parent.getParentId()).orElse(parent.getId()));
         fileObject.setBucketsId(parent.getBucketsId());
         fileObject.setFilePath(fileNativeService.getPath(parent.getFilePath(), file.getName()));
         fileObject.setRealPath(file.getAbsolutePath());

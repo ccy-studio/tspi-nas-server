@@ -22,10 +22,15 @@ public class WebResponseLogAdapter implements ResponseBodyAdvice<Object> {
 
     @Override
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType, Class<? extends HttpMessageConverter<?>> selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
-        if (!request.getURI().getPath().equals("/ok")) {
+        if (!ignoreCheck(request.getURI().getPath())) {
             logger.info("RSP: " + JSONUtil.toJSONString(body));
         }
         return body;
+    }
+
+    public boolean ignoreCheck(String path) {
+        return path.equals("/ok")
+                || path.startsWith("/fs/preview");
     }
 
 }

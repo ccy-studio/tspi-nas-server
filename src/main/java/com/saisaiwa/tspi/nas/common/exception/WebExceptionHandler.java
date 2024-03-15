@@ -36,6 +36,12 @@ public class WebExceptionHandler extends ResponseEntityExceptionHandler {
         return BaseResponse.fail(ex.getCode(), ex.getMsg());
     }
 
+    @ExceptionHandler(FileObjectNotFound.class)
+    public BaseResponse<Void> fileObjectNotFound(FileObjectNotFound ex) {
+        LOGGER.error("FileObjectNotFound: ", ex);
+        return BaseResponse.fail(RespCode.FILE_NOTFOUNT);
+    }
+
     @ExceptionHandler(DuplicateKeyException.class)
     private BaseResponse<Void> duplicateKeyException(DuplicateKeyException exception) {
         LOGGER.error("Duplicated data: ", exception);
@@ -48,7 +54,7 @@ public class WebExceptionHandler extends ResponseEntityExceptionHandler {
      * 业务代码检查参数错误
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    public BaseResponse<Void> illegalArgumentException(BizException ex) {
+    public BaseResponse<Void> illegalArgumentException(IllegalArgumentException ex) {
         LOGGER.error("Parameter error: ", ex);
         return BaseResponse.fail(RespCode.INVALID_PARAMS);
     }

@@ -26,7 +26,9 @@ public enum RespCode {
     PERMISSION_DENIED(403, "Permission denied"),
     ACL_PERMISSION_DENIED(4003, "Buckets Permission denied"),
     FILE_ERROR(50000, "FileObject read failure!"),
-    DATA_REFUSE(5002,"此数据拒绝操作");
+    FILE_NOTFOUNT(40001, "FileObject Notfount"),
+    FILE_PERMISSION_DENIED(40003, "FileObject Permission denied"),
+    DATA_REFUSE(5002, "此数据拒绝操作");
 
     private int code;
     private String msg;

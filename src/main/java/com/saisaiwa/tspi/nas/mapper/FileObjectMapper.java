@@ -20,11 +20,12 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
 
     /**
      * 查询一个根据文件名称和父ID
+     *
      * @param fileName
      * @param pid
      * @return
      */
-    FileObject getByFileNameAndParentId(String fileName,Long pid);
+    FileObject getByFileNameAndParentId(String fileName, Long pid);
 
     /**
      * 查询全部根据存储桶id
@@ -39,7 +40,14 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
      *
      * @param bid
      */
-    void deleteByBucketsId(Long bid);
+    int deleteByBucketsId(Long bid);
+
+    /**
+     * 删除指定的RealPath开头的文件数据，但不包含自身
+     *
+     * @param realPath
+     */
+    int deletePartByRealWithStartNotSelf(String realPath);
 
 
     /**
@@ -72,15 +80,31 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
      * @param path
      * @return
      */
-    int deleteAllByPath(String path);
+    int deleteAllByFilePathAndStartWith(String path);
 
     /**
-     * 查询文件根据路径前缀（包含）
+     * 删除一个文件如果是目录则一同删除目录下的所有文件
      *
      * @param path
      * @return
      */
-    List<FileObject> selectAllByStartPath(String path);
+    int deleteAllByRealPathAndStartWith(String path);
+
+    /**
+     * 查询文件根据路径前缀（包含）
+     *
+     * @param path 绝对路径
+     * @return
+     */
+    List<FileObject> selectAllByStartFilePath(String path);
+
+    /**
+     * 查询文件根据路径前缀（包含）
+     *
+     * @param path 物理路径
+     * @return
+     */
+    List<FileObject> selectAllByStartRealPath(String path);
 
     /**
      * 删除-根据桶id和满足的realPath
@@ -90,4 +114,16 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
      * @return
      */
     int deleteByRealPathAndBucketsId(@Param("bid") Long bid, @Param("paths") Collection<String> paths);
+
+
+    /**
+     * 查询根据物理路径相等且执定的桶ID查询一个
+     *
+     * @param realPath
+     * @param bid      可选
+     * @return
+     */
+    FileObject getByRealPathAndBucketsId(@Param("realPath") String realPath, @Param("bid") Long bid);
+
+
 }

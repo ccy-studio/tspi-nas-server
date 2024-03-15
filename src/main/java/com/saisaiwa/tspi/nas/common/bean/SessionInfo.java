@@ -2,7 +2,9 @@ package com.saisaiwa.tspi.nas.common.bean;
 
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
+import com.saisaiwa.tspi.nas.domain.entity.Buckets;
 import com.saisaiwa.tspi.nas.domain.entity.User;
+import com.saisaiwa.tspi.nas.domain.vo.BucketsPermissionUserVo;
 import lombok.Data;
 
 /**
@@ -20,6 +22,11 @@ public class SessionInfo {
     private String ak;
 
     private String sk;
+
+    /**
+     * 用户当前对桶的权限ACL
+     */
+    private BucketsPermissionUserVo bucketPermission;
 
     private static final ThreadLocal<SessionInfo> SESSION_INFO_THREAD_LOCAL = new ThreadLocal<>();
 

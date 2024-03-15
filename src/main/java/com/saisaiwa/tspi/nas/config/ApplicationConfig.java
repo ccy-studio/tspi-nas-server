@@ -23,6 +23,9 @@ public class ApplicationConfig implements WebMvcConfigurer {
     @Resource
     private SysSessionInterceptor sysSessionInterceptor;
 
+    @Resource
+    private FileObjectInterceptor fileObjectInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(webRequestLogAdapter)
@@ -30,7 +33,10 @@ public class ApplicationConfig implements WebMvcConfigurer {
         registry.addInterceptor(sysSessionInterceptor)
                 .excludePathPatterns("/ok")
                 .excludePathPatterns("/sys/login")
-                .excludePathPatterns("/ntf");
+                .excludePathPatterns("/fs");
+
+        registry.addInterceptor(fileObjectInterceptor)
+                .addPathPatterns("/fs/**");
     }
 
     @Bean

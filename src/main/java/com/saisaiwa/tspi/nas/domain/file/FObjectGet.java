@@ -15,6 +15,6 @@ public class FObjectGet extends FBaseEntity {
     /**
      * 下载还是预览
      */
-    private boolean isDownload;
+    private boolean download;
 
 }
