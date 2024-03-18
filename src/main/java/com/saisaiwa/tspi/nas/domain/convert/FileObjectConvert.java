@@ -1,9 +1,11 @@
 package com.saisaiwa.tspi.nas.domain.convert;
 
+import com.saisaiwa.tspi.nas.domain.dto.FileObjectShareExtDto;
 import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.entity.FileObject;
 import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.FileShareInfoVo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValueCheckStrategy;
@@ -28,4 +30,8 @@ public interface FileObjectConvert {
 
 
     FileBlockInfoVo toFileBlockInfoVo(FileBlockRecords records);
+
+    @Mapping(target = "expirationTime", dateFormat = "yyyy-MM-dd HH:mm")
+    FileShareInfoVo toFileShareInfoVo(FileObjectShareExtDto share);
+    List<FileShareInfoVo> toFileShareInfoVo(List<FileObjectShareExtDto> share);
 }

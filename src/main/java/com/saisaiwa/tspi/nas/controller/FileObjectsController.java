@@ -3,21 +3,21 @@ package com.saisaiwa.tspi.nas.controller;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.saisaiwa.tspi.nas.common.anno.CheckBucketsAcl;
-import com.saisaiwa.tspi.nas.common.bean.BaseResponse;
-import com.saisaiwa.tspi.nas.common.bean.IdReq;
-import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
-import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
+import com.saisaiwa.tspi.nas.common.bean.*;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.file.FileRangeInputStream;
 import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.enums.BucketsACLEnum;
 import com.saisaiwa.tspi.nas.domain.file.*;
 import com.saisaiwa.tspi.nas.domain.req.BucketsQueryReq;
+import com.saisaiwa.tspi.nas.domain.req.FileShareListQueryReq;
 import com.saisaiwa.tspi.nas.domain.vo.BucketsInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.FileShareInfoVo;
 import com.saisaiwa.tspi.nas.service.BucketsService;
 import com.saisaiwa.tspi.nas.service.FileObjectService;
+import com.saisaiwa.tspi.nas.service.FileShareService;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.core.io.InputStreamResource;
@@ -45,6 +45,9 @@ public class FileObjectsController {
 
     @Resource
     private BucketsService bucketsService;
+
+    @Resource
+    private FileShareService fileShareService;
 
     private void setBucketId(FBaseEntity entity) {
         entity.setBucketId(SessionInfo.get().getBucketPermission().getBucketsId());
@@ -252,4 +255,31 @@ public class FileObjectsController {
         return fileObjectService.getFileObjectStream(dat, range);
     }
 
+
+    /**
+     * 创建文件外链分享
+     *
+     * @param dat
+     */
+    @PostMapping("/share")
+    @CheckBucketsAcl({BucketsACLEnum.GET_OBJ, BucketsACLEnum.SHARE_OBJ})
+    public BaseResponse<FileShareInfoVo> createObjectShare(@RequestBody @Validated FObjectShare dat) {
+        setBucketId(dat);
+        return BaseResponse.ok(fileShareService.createObjectShare(dat));
+    }
+
+
+    /**
+     * 获取用户的创建分享数据
+     *
+     * @param req
+     * @return
+     */
+    @GetMapping("/share")
+    @CheckBucketsAcl({BucketsACLEnum.GET_OBJ, BucketsACLEnum.SHARE_OBJ})
+    public BaseResponse<PageBodyResponse<FileShareInfoVo>> getMyShareAll(FileShareListQueryReq req) {
+        req.setBucketsId(SessionInfo.get().getBucketPermission().getBucketsId());
+        req.setUid(SessionInfo.get().getUid());
+        return BaseResponse.ok(fileShareService.getMyShareAll(req));
+    }
 }

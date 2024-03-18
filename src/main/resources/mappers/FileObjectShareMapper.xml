@@ -7,4 +7,48 @@
         from t_file_object_share
         where create_user = #{uid}
     </delete>
+    <select id="getUserShareByObjectId" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObjectShare">
+        select *
+        from t_file_object_share
+        where create_user = #{uid}
+          and is_delete = 0
+          and file_object_id = #{fid}
+        limit 1
+    </select>
+    <select id="getBySignKey" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObjectShare">
+        select *
+        from t_file_object_share
+        where is_delete = 0
+          and sign_key = #{key}
+    </select>
+    <select id="selectShareFileObjectExt" resultType="com.saisaiwa.tspi.nas.domain.dto.FileObjectShareExtDto">
+        select s.*,
+        f.file_name,
+        f.file_size,
+        bk.buckets_name
+        from t_file_object_share as s
+        join t_file_object as f on f.id = s.file_object_id
+        join t_buckets as bk on bk.id = f.buckets_id
+        <where>
+            and s.is_delete = 0
+            <if test="uid neq null">
+                and s.create_user = #{uid}
+            </if>
+            and bk.id = #{bucketsId}
+            <if test="fileName neq null and fileName neq ''">
+                and f.file_name like concat('%',#{fileName},'%')
+            </if>
+        </where>
+    </select>
+    <select id="getExtBySignKey" resultType="com.saisaiwa.tspi.nas.domain.dto.FileObjectShareExtDto">
+        select s.*,
+               f.file_name,
+               f.file_size,
+               bk.buckets_name
+        from t_file_object_share as s
+                 join t_file_object as f on f.id = s.file_object_id
+                 join t_buckets as bk on bk.id = f.buckets_id
+        where s.is_delete = 0
+          and s.sign_key = #{key}
+    </select>
 </mapper>

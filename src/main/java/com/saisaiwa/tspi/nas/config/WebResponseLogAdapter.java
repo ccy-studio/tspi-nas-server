@@ -30,7 +30,7 @@ public class WebResponseLogAdapter implements ResponseBodyAdvice<Object> {
 
     public boolean ignoreCheck(String path) {
         return path.equals("/ok")
-                || path.startsWith("/fs/preview");
+                || path.startsWith("/fs/preview") || path.startsWith("/share");
     }
 
 }

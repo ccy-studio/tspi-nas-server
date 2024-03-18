@@ -8,15 +8,19 @@ import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
 import com.saisaiwa.tspi.nas.common.exception.FileObjectNotFound;
+import com.saisaiwa.tspi.nas.common.exception.MessageBoxException;
 import com.saisaiwa.tspi.nas.common.file.FileBlockEntity;
 import com.saisaiwa.tspi.nas.common.file.FileGetNativeInfo;
 import com.saisaiwa.tspi.nas.common.file.FileNativeService;
 import com.saisaiwa.tspi.nas.common.file.FileRangeInputStream;
+import com.saisaiwa.tspi.nas.common.util.SpringUtils;
 import com.saisaiwa.tspi.nas.config.SystemConfiguration;
 import com.saisaiwa.tspi.nas.domain.convert.FileObjectConvert;
 import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.entity.FileObject;
+import com.saisaiwa.tspi.nas.domain.entity.FileObjectShare;
 import com.saisaiwa.tspi.nas.domain.file.*;
+import com.saisaiwa.tspi.nas.domain.req.FileObjectShareGetReq;
 import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
 import com.saisaiwa.tspi.nas.mapper.FileBlockRecordsMapper;
@@ -24,6 +28,7 @@ import com.saisaiwa.tspi.nas.mapper.FileObjectMapper;
 import com.saisaiwa.tspi.nas.mapper.FileObjectShareMapper;
 import com.saisaiwa.tspi.nas.service.FileObjectService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
@@ -31,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -355,5 +361,39 @@ public class FileObjectServiceImpl implements FileObjectService {
                 .headers(headers)
                 .body(new InputStreamResource(fileGetNativeInfo.getInputStream()));
     }
+
+
+    /**
+     * 获取分享文件
+     *
+     * @param req
+     * @return
+     */
+    @Override
+    public ResponseEntity<?> getShareFileObject(FileObjectShareGetReq req) {
+        FileObjectShare share = objectShareMapper.getBySignKey(req.getKey());
+        if (share == null) {
+            throw new MessageBoxException("没有找到您访问的资源！");
+        }
+        if (share.getExpirationTime().isBefore(LocalDateTime.now())) {
+            throw new MessageBoxException("来晚咯，分享已过期！");
+        }
+        if (share.getIsSymlink() || req.isForceSymlink()) {
+            if (!share.getAccessPassword().equals(req.getPwd())) {
+                throw new BizException("密码不正确！");
+            }
+            //直链
+            FObjectGet get = new FObjectGet();
+            get.setDownload(req.isDownload());
+            get.setObjectId(share.getFileObjectId());
+            return this.getFileObjectStream(get, req.getRange());
+        } else {
+            //转发
+            HttpSession session = SpringUtils.getRequest().getSession();
+            session.setAttribute("req", req);
+            return ResponseEntity.status(302).location(URI.create(req.getForwardUri())).build();
+        }
+    }
+
 
 }

@@ -3,6 +3,7 @@ package com.saisaiwa.tspi.nas.service;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.file.*;
+import com.saisaiwa.tspi.nas.domain.req.FileObjectShareGetReq;
 import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
 import org.springframework.core.io.InputStreamResource;
@@ -40,4 +41,6 @@ public interface FileObjectService {
     FileObjectInfoVo fileBlockMerge(Long blockId);
 
     ResponseEntity<InputStreamResource> getFileObjectStream(FObjectGet dat, String range);
+
+    ResponseEntity<?> getShareFileObject(FileObjectShareGetReq req);
 }
