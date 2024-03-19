@@ -42,6 +42,11 @@ public class BucketsInfoVo {
     private String createTime;
 
     /**
+     * 根目录ID
+     */
+    private Long rootFolderId;
+
+    /**
      * 用户的ACL
      */
     private BucketsPermissionUserVo acl;

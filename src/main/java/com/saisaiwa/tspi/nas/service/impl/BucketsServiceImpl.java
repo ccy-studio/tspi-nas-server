@@ -28,6 +28,7 @@ import com.saisaiwa.tspi.nas.domain.vo.BucketsDetailVo;
 import com.saisaiwa.tspi.nas.domain.vo.BucketsInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.BucketsPermissionUserVo;
 import com.saisaiwa.tspi.nas.mapper.BucketsMapper;
+import com.saisaiwa.tspi.nas.mapper.FileObjectMapper;
 import com.saisaiwa.tspi.nas.mapper.PoliciesRuleMapper;
 import com.saisaiwa.tspi.nas.mapper.UserMapper;
 import com.saisaiwa.tspi.nas.service.BucketsService;
@@ -51,6 +52,9 @@ public class BucketsServiceImpl implements BucketsService {
 
     @Resource
     private BucketsMapper bucketsMapper;
+
+    @Resource
+    private FileObjectMapper fileObjectMapper;
 
     @Resource
     private PoliciesRuleMapper policiesRuleMapper;
@@ -234,6 +238,10 @@ public class BucketsServiceImpl implements BucketsService {
                 infoVo.setAcl(vo);
             }
         }
+        infoVos.forEach(v -> {
+            Long id = fileObjectMapper.getRootObject(v.getId()).getId();
+            v.setRootFolderId(id);
+        });
         return infoVos;
     }
 
