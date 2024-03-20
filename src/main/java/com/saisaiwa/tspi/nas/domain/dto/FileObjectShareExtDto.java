@@ -1,5 +1,6 @@
 package com.saisaiwa.tspi.nas.domain.dto;
 
+import com.saisaiwa.tspi.nas.domain.entity.FileObjectShare;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,7 +11,7 @@ import lombok.Setter;
  **/
 @Setter
 @Getter
-public class FileObjectShareExtDto {
+public class FileObjectShareExtDto extends FileObjectShare {
 
     /**
      * 文件名
