@@ -32,6 +32,11 @@ import java.util.concurrent.locks.ReentrantLock;
 @Getter
 public class FileListener implements FileAlterationListener {
 
+    /**
+     * 事务提交最大单位数量
+     */
+    private static final int COMMIT_MAX_COUNT = 100;
+
     private static final int INIT_CNT = 2;
 
     private static final Tika TIKA = new Tika();
@@ -53,6 +58,9 @@ public class FileListener implements FileAlterationListener {
     private final Map<String, String> parentMdcContext;
 
     private final ReentrantLock lock;
+
+    private int currentSqlCount;
+
 
     public FileListener(Buckets buckets) {
         parentMdcContext = MDC.getCopyOfContextMap();
@@ -88,12 +96,17 @@ public class FileListener implements FileAlterationListener {
             log.error("文件夹新增失败，找不到父路径或者不为文件夹：{}", parentObject);
             return;
         }
-        FileObject fileObject = new FileObject();
-        fileObject.setFileName(file.getName());
-        fileObject.setBucketsId(buckets.getId());
-        fileObject.setParentId(parentObject.getId());
-        fileNativeService.createFolderFileObject(fileObject, parentObject, true);
-        fileObjectMapper.insert(fileObject);
+        try {
+            FileObject fileObject = new FileObject();
+            fileObject.setFileName(file.getName());
+            fileObject.setBucketsId(buckets.getId());
+            fileObject.setParentId(parentObject.getId());
+            fileNativeService.createFolderFileObject(fileObject, parentObject, true);
+            fileObjectMapper.insert(fileObject);
+            sqlAutoCommitAndStart();
+        } catch (Exception e) {
+            log.error("onDirectoryCreate Error", e);
+        }
     }
 
     @Override
@@ -101,9 +114,14 @@ public class FileListener implements FileAlterationListener {
         if (initFlag < INIT_CNT) {
             return;
         }
-        printFileInfo(file, "文件夹删除");
-        int delCount = fileObjectMapper.deleteAllByRealPathAndStartWith(file.getAbsolutePath());
-        log.info("删除文件夹数量：{}", delCount);
+        try {
+            printFileInfo(file, "文件夹删除");
+            int delCount = fileObjectMapper.deleteAllByRealPathAndStartWith(file.getAbsolutePath());
+            log.info("删除文件夹数量：{}", delCount);
+            sqlAutoCommitAndStart();
+        } catch (Exception e) {
+            log.error("onDirectoryDelete ", e);
+        }
     }
 
     @Override
@@ -119,35 +137,43 @@ public class FileListener implements FileAlterationListener {
         if (initFlag < INIT_CNT) {
             return;
         }
+        if (file.isDirectory()) {
+            return;
+        }
         //判断是否存在相同的文件
         if (fileObjectMapper.getByRealPathAndBucketsId(file.getAbsolutePath(), buckets.getId()) != null) {
             return;
         }
-        printFileInfo(file, "文件创建");
-        String parentRealPath = file.getParentFile().getAbsolutePath();
-        FileObject parentObject = fileObjectMapper.getByRealPathAndBucketsId(parentRealPath, buckets.getId());
-        if (parentObject == null || !parentObject.getIsDir()) {
-            log.error("文件新增失败，找不到父路径或者不为文件夹：{}", parentObject);
-            return;
-        }
-        FileObject fileObject = new FileObject();
-        String md5 = SecureUtil.md5(file);
-        fileObject.setBucketsId(buckets.getId());
-        fileObject.setFileName(file.getName());
-        fileObject.setFilePath(fileNativeService.getPath(parentObject.getFilePath(), fileObject.getFileName()));
-        fileObject.setRealPath(file.getAbsolutePath());
-        fileObject.setFileMd5(md5);
-        fileObject.setFileSize(FileUtil.size(file, true));
-        fileObject.setParentId(parentObject.getId());
-        fileObject.setCreateTime(LocalDateTime.now());
-        fileObject.setIsDir(false);
         try {
-            fileObject.setFileContentType(TIKA.detect(file));
-        } catch (IOException e) {
-            log.error("获取文件ContentType错误", e);
-            fileObject.setFileContentType("application/octet-stream");
+            printFileInfo(file, "文件创建");
+            String parentRealPath = file.getParentFile().getAbsolutePath();
+            FileObject parentObject = fileObjectMapper.getByRealPathAndBucketsId(parentRealPath, buckets.getId());
+            if (parentObject == null || !parentObject.getIsDir()) {
+                log.error("文件新增失败，找不到父路径或者不为文件夹：{}", parentObject);
+                return;
+            }
+            FileObject fileObject = new FileObject();
+            String md5 = SecureUtil.md5(file);
+            fileObject.setBucketsId(buckets.getId());
+            fileObject.setFileName(file.getName());
+            fileObject.setFilePath(fileNativeService.getPath(parentObject.getFilePath(), fileObject.getFileName()));
+            fileObject.setRealPath(file.getAbsolutePath());
+            fileObject.setFileMd5(md5);
+            fileObject.setFileSize(FileUtil.size(file, true));
+            fileObject.setParentId(parentObject.getId());
+            fileObject.setCreateTime(LocalDateTime.now());
+            fileObject.setIsDir(false);
+            try {
+                fileObject.setFileContentType(TIKA.detect(file));
+            } catch (IOException e) {
+                log.error("获取文件ContentType错误", e);
+                fileObject.setFileContentType("application/octet-stream");
+            }
+            fileObjectMapper.insert(fileObject);
+            sqlAutoCommitAndStart();
+        } catch (Exception e) {
+            log.error("onFileCreate ", e);
         }
-        fileObjectMapper.insert(fileObject);
     }
 
     @Override
@@ -155,9 +181,14 @@ public class FileListener implements FileAlterationListener {
         if (initFlag < INIT_CNT) {
             return;
         }
-        printFileInfo(file, "文件删除");
-        int delCount = fileObjectMapper.deleteAllByRealPathAndStartWith(file.getAbsolutePath());
-        log.info("删除文件-数量：{}", delCount);
+        try {
+            printFileInfo(file, "文件删除");
+            int delCount = fileObjectMapper.deleteAllByRealPathAndStartWith(file.getAbsolutePath());
+            log.info("删除文件-数量：{}", delCount);
+            sqlAutoCommitAndStart();
+        } catch (Exception e) {
+            log.error("onFileDelete", e);
+        }
     }
 
     @Override
@@ -174,7 +205,7 @@ public class FileListener implements FileAlterationListener {
             return;
         }
         if (initFlag > INIT_CNT) {
-            transactionStatus = platformTransactionManager.getTransaction(transactionDefinition);
+            startTransaction();
             return;
         }
         initFlag++;
@@ -182,12 +213,32 @@ public class FileListener implements FileAlterationListener {
 
     @Override
     public void onStop(FileAlterationObserver fileAlterationObserver) {
+        commit();
+        if (lock.isLocked()) {
+            lock.unlock();
+        }
+    }
+
+    private void sqlAutoCommitAndStart() {
+        currentSqlCount++;
+        if (currentSqlCount > COMMIT_MAX_COUNT) {
+            commit();
+            startTransaction();
+        }
+    }
+
+
+    private void commit() {
         if (transactionStatus != null) {
             platformTransactionManager.commit(transactionStatus);
             transactionStatus = null;
         }
-        if (lock.isLocked()) {
-            lock.unlock();
+    }
+
+    private void startTransaction() {
+        if (transactionStatus == null) {
+            transactionStatus = platformTransactionManager.getTransaction(transactionDefinition);
+            currentSqlCount = 0;
         }
     }
 

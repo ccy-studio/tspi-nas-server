@@ -16,5 +16,5 @@ spring:
 
 sys:
   default-password: sswnas123
-  access-token-security-key: 1fad18b905d108be28/f708d38d427c
+  access-token-security-key: 1fad18b905d108be28/f708d38d427b
   access-token-ttl: 7200
