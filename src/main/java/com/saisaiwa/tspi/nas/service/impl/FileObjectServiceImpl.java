@@ -33,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
@@ -46,7 +45,6 @@ import java.util.List;
  * @author: saisiawa
  **/
 @Service
-@Transactional(rollbackFor = Exception.class)
 @Slf4j
 public class FileObjectServiceImpl implements FileObjectService {
 
@@ -118,14 +116,15 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!fileObject.getBucketsId().equals(targetObject.getBucketsId())) {
             throw new FileObjectNotFound();
         }
-        if (fileObject.getParentId().equals(targetObject.getParentId())) {
-            throw new FileObjectNotFound();
+        if (fileObject.getParentId().equals(targetObject.getId())) {
+            //如果要复制的目的地和要复制的问题根目录一样那么就不复制了
+            return;
         }
         if (!targetObject.getIsDir()) {
             throw new FileObjectNotFound();
         }
         fileNativeService.lockAccept(dat.getBucketId(), v -> {
-            if (!v.copyFileObject(fileObject, targetObject, dat.getIsOverwrite(), false)) {
+            if (!v.copyFileObject(fileObject, targetObject, dat.getIsOverwrite())) {
                 throw new BizException("复制失败");
             }
         });
@@ -149,7 +148,7 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!fileObject.getBucketsId().equals(targetObject.getBucketsId())) {
             throw new FileObjectNotFound();
         }
-        if (fileObject.getParentId().equals(targetObject.getParentId())) {
+        if (fileObject.getParentId().equals(targetObject.getId())) {
             throw new FileObjectNotFound();
         }
         if (!targetObject.getIsDir()) {

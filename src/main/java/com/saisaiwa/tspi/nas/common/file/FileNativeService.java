@@ -5,6 +5,8 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import com.baomidou.mybatisplus.core.batch.MybatisBatch;
+import com.baomidou.mybatisplus.core.toolkit.MybatisBatchUtils;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
@@ -15,9 +17,10 @@ import com.saisaiwa.tspi.nas.mapper.FileBlockRecordsMapper;
 import com.saisaiwa.tspi.nas.mapper.FileObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.tika.Tika;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -25,6 +28,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
@@ -44,8 +48,10 @@ public class FileNativeService {
     private FileBlockRecordsMapper fileBlockRecordsMapper;
 
     @Resource
-    @Lazy
-    private FileLocalScanService scanService;
+    private TransactionTemplate transactionTemplate;
+
+    @Resource
+    private SqlSessionFactory sqlSessionFactory;
 
     private final Tika tika = new Tika();
 
@@ -96,6 +102,7 @@ public class FileNativeService {
         if (FileUtil.exist(point)) {
             return FileUtil.del(point);
         }
+        FileLockUtil.removeLock(buckets.getId());
         return true;
     }
 
@@ -266,7 +273,7 @@ public class FileNativeService {
             throw new BizException(RespCode.FILE_ERROR);
         }
         if (!FileUtil.exist(fileObject.getRealPath())) {
-            return false;
+            return true;
         }
         return FileUtil.del(fileObject.getRealPath());
     }
@@ -291,6 +298,12 @@ public class FileNativeService {
         }
         //查询原始此路径下所有的文件
         List<FileObject> list = fileObjectMapper.selectAllByStartFilePath(sourceFileObject.getFilePath());
+
+        FileObject root = list.stream().filter(f -> f.getId().equals(sourceFileObject.getId())).findAny().orElseThrow();
+        root.setParentId(targetFolder.getId());
+        root.setFilePath(getPath(targetFolder.getFilePath(), root.getFileName()));
+        root.setRealPath(targetFolder.getRealPath() + File.separator + root.getFileName());
+
         Set<String> delRealPaths = new HashSet<>();
         for (FileObject object : list) {
             object.setBucketsId(targetFolder.getBucketsId());
@@ -298,34 +311,38 @@ public class FileNativeService {
             object.setCreateTime(LocalDateTime.now());
             object.setUpdateTime(LocalDateTime.now());
             object.setUpdateUser(null);
-            String filePath = object.getFilePath();
-            String realPath = object.getRealPath();
-            if (object.getId().equals(sourceFileObject.getId())) {
-                object.setParentId(targetFolder.getId());
-                filePath = getPath(targetFolder.getFilePath(), object.getFileName());
-                realPath = new File(target, sourceFileObject.getFileName()).getAbsolutePath();
-            } else {
-                filePath = targetFolder.getFilePath() + filePath.substring(sourceFileObject.getFilePath().length());
-                realPath = targetFolder.getRealPath() + realPath.substring(sourceFileObject.getRealPath().length());
+            if (!object.getId().equals(sourceFileObject.getId())) {
+                String path = object.getFilePath();
+                path = root.getFilePath() + path.substring(sourceFileObject.getFilePath().length());
+                object.setFilePath(path);
+
+                path = object.getRealPath();
+                path = root.getRealPath() + path.substring(sourceFileObject.getRealPath().length());
+                object.setRealPath(path);
             }
-            object.setFilePath(filePath);
-            if (FileUtil.exist(realPath)) {
+
+            if (FileUtil.exist(object.getRealPath())) {
                 if (autoOverwrite) {
-                    delRealPaths.add(realPath);
+                    delRealPaths.add(object.getRealPath());
                 } else {
                     if (object.getId().equals(sourceFileObject.getId())) {
                         return false;
                     }
-                    realPath = null;
+                    object.setRealPath(null);
                 }
             }
-            object.setRealPath(realPath);
+
         }
         if (!delRealPaths.isEmpty()) {
             fileObjectMapper.deleteByRealPathAndBucketsId(targetFolder.getBucketsId(), delRealPaths);
         }
-        list.stream().filter(v -> StrUtil.isNotBlank(v.getRealPath()))
-                .forEach(fileObjectMapper::updateById);
+
+        list.removeIf(v -> StrUtil.isBlank(v.getRealPath()));
+        //执行批量操作
+        transactionTemplate.execute((status -> {
+            MybatisBatch.Method<FileObject> mapperMethod = new MybatisBatch.Method<>(FileObjectMapper.class);
+            return MybatisBatchUtils.execute(sqlSessionFactory, list, mapperMethod.updateById());
+        }));
 
         FileUtil.move(source, target, autoOverwrite);
 
@@ -339,10 +356,9 @@ public class FileNativeService {
      * @param source       来源
      * @param targetFolder 目标文件夹
      * @param isOverwrite  是否覆盖
-     * @param logicCopy    是否逻辑复制
      * @return {@link FileObject}
      */
-    public boolean copyFileObject(FileObject source, FileObject targetFolder, boolean isOverwrite, boolean logicCopy) {
+    public boolean copyFileObject(FileObject source, FileObject targetFolder, boolean isOverwrite) {
         if (!targetFolder.getIsDir()) {
             return false;
         }
@@ -354,55 +370,86 @@ public class FileNativeService {
         if (!FileUtil.isDirectory(target)) {
             return false;
         }
+
+        Set<String> delRulePaths = new HashSet<>();
         List<FileObject> fileList = fileObjectMapper.selectAllByStartFilePath(source.getFilePath());
+
+        FileObject root = fileList.stream().filter(f -> f.getId().equals(source.getId())).findAny().orElseThrow();
+        root.setParentId(targetFolder.getId());
+        root.setFilePath(getPath(targetFolder.getFilePath(), root.getFileName()));
+        root.setRealPath(targetFolder.getRealPath() + File.separator + root.getFileName());
+
         for (FileObject object : fileList) {
             object.setBucketsId(targetFolder.getBucketsId());
             object.setCreateTime(LocalDateTime.now());
-            object.setUpdateTime(LocalDateTime.now());
+            object.setUpdateTime(null);
             object.setCreateUser(SessionInfo.getAndNull().getUid());
-            if (object.getId().equals(source.getId())) {
-                object.setFilePath(getPath(targetFolder.getFilePath(), object.getFileName()));
-            } else {
-                String filePath = object.getFilePath();
-                filePath = targetFolder.getFilePath() + filePath.substring(source.getFilePath().length());
-                object.setFilePath(filePath);
+            if (object.getIsDir()) {
+                object.setTempUid(object.getId());
             }
-        }
-        if (!logicCopy) {
-            //物理复制
-            Set<String> delRulePaths = new HashSet<>();
-            for (FileObject object : fileList) {
-                String realPath = object.getRealPath();
-                if (object.getId().equals(source.getId())) {
-                    realPath = new File(targetFolder.getRealPath(), object.getFileName()).getAbsolutePath();
-                } else {
-                    realPath = targetFolder.getRealPath() + realPath.substring(source.getRealPath().length());
-                }
 
-                if (FileUtil.exist(realPath)) {
-                    if (isOverwrite) {
-                        //如果覆盖
-                        delRulePaths.add(realPath);
-                    } else {
-                        //不覆盖
-                        if (object.getId().equals(source.getId())) {
-                            return false;
-                        }
-                        realPath = null;
+            String realPath = object.getRealPath();
+            if (!object.getId().equals(source.getId())) {
+                String filePath = object.getFilePath();
+                filePath = root.getFilePath() + filePath.substring(source.getFilePath().length());
+                object.setFilePath(filePath);
+                realPath = root.getRealPath() + realPath.substring(source.getRealPath().length());
+            }
+
+            if (FileUtil.exist(realPath)) {
+                if (isOverwrite) {
+                    //如果覆盖
+                    delRulePaths.add(realPath);
+                } else {
+                    //不覆盖
+                    if (object.getId().equals(source.getId())) {
+                        return false;
                     }
+                    realPath = null;
                 }
-                object.setRealPath(realPath);
             }
-            if (!delRulePaths.isEmpty()) {
-                fileObjectMapper.deleteByRealPathAndBucketsId(targetFolder.getBucketsId(), delRulePaths);
-            }
-            fileList = fileList.stream().filter(v -> StrUtil.isNotBlank(v.getRealPath())).toList();
-            FileUtil.copy(src, target, isOverwrite);
+            object.setRealPath(realPath);
         }
-        fileList.forEach(v -> {
-            v.setId(null);
-            fileObjectMapper.insert(v);
-        });
+        if (!delRulePaths.isEmpty()) {
+            fileObjectMapper.deleteByRealPathAndBucketsId(targetFolder.getBucketsId(), delRulePaths);
+        }
+        fileList.removeIf(v -> StrUtil.isBlank(v.getRealPath()));
+        if (fileList.isEmpty()) {
+            return false;
+        }
+
+        List<FileObject> insert = fileList.parallelStream().filter(FileObject::getIsDir).peek(v -> v.setId(null)).toList();
+        if (!insert.isEmpty()) {
+            transactionTemplate.execute((status -> {
+                MybatisBatch.Method<FileObject> mapperMethod = new MybatisBatch.Method<>(FileObjectMapper.class);
+                return MybatisBatchUtils.execute(sqlSessionFactory, insert, mapperMethod.insert());
+            }));
+        }
+
+        fileList.parallelStream().forEach(v -> insert.stream().filter(f -> f.getTempUid().equals(v.getParentId()))
+                .findAny().ifPresent(vv -> {
+                    v.setParentId(vv.getId());
+                    if (v.getIsDir()) {
+                        v.setUpdateTime(LocalDateTime.now());
+                    }
+                }));
+        List<FileObject> update = fileList.parallelStream().filter(f -> f.getIsDir() && f.getUpdateTime() != null).toList();
+        if (!update.isEmpty()) {
+            transactionTemplate.execute((status -> {
+                MybatisBatch.Method<FileObject> mapperMethod = new MybatisBatch.Method<>(FileObjectMapper.class);
+                return MybatisBatchUtils.execute(sqlSessionFactory, update, mapperMethod.updateById());
+            }));
+        }
+
+        List<FileObject> insert2 = fileList.parallelStream().filter(f -> !f.getIsDir()).peek(v -> v.setId(null)).toList();
+        if (!insert2.isEmpty()) {
+            transactionTemplate.execute((status -> {
+                MybatisBatch.Method<FileObject> mapperMethod = new MybatisBatch.Method<>(FileObjectMapper.class);
+                return MybatisBatchUtils.execute(sqlSessionFactory, insert2, mapperMethod.insert());
+            }));
+        }
+
+        FileUtil.copy(src, target, isOverwrite);
         return true;
     }
 
@@ -425,12 +472,12 @@ public class FileNativeService {
         if (new File(file.getParentFile(), newName).exists()) {
             return false;
         }
-        File target = FileUtil.rename(file, newName, true);
 
         String filePath = fileObject.getFilePath();
         filePath = filePath.substring(0, filePath.lastIndexOf(DELIMITER) + 1) + file.getName();
         String realPath = fileObject.getRealPath();
 
+        List<FileObject> update = new ArrayList<>();
         if (fileObject.getIsDir()) {
             // 是目录
             // 查询子文件列表
@@ -445,16 +492,22 @@ public class FileNativeService {
                 itemRealPath = realPath + itemRealPath.substring(fileObject.getRealPath().length());
                 object.setFilePath(itemFilePath);
                 object.setRealPath(itemRealPath);
-                fileObjectMapper.updateById(object);
+                update.add(object);
             }
         }
 
         fileObject.setFileName(newName);
         fileObject.setFilePath(filePath);
-        fileObject.setRealPath(target.getAbsolutePath());
+        fileObject.setRealPath(new File(file.getParent(), newName).getAbsolutePath());
         fileObject.setUpdateUser(SessionInfo.getAndNull().getUid());
         fileObject.setUpdateTime(LocalDateTime.now());
-        fileObjectMapper.updateById(fileObject);
+        update.add(fileObject);
+        //执行批量操作
+        transactionTemplate.execute((status -> {
+            MybatisBatch.Method<FileObject> mapperMethod = new MybatisBatch.Method<>(FileObjectMapper.class);
+            return MybatisBatchUtils.execute(sqlSessionFactory, update, mapperMethod.updateById());
+        }));
+        FileUtil.rename(file, newName, true);
         return true;
     }
 
@@ -643,18 +696,22 @@ public class FileNativeService {
      * @param call
      */
     public void lockAccept(Long bucketId, Consumer<FileNativeService> call) {
-        ReentrantLock lock = scanService.getLock(bucketId);
+        ReentrantLock lock = FileLockUtil.getLock(bucketId);
         try {
-            if (lock != null) {
-                lock.lock();
+            if (lock.tryLock(10, TimeUnit.SECONDS)) {
+                try {
+                    call.accept(this);
+                } finally {
+                    if (lock.isLocked()) {
+                        lock.unlock();
+                    }
+                }
+            } else {
+                throw new BizException(RespCode.ERROR);
             }
-            call.accept(this);
         } catch (Exception e) {
             log.error("获取锁出现异常：", e);
-        } finally {
-            if (lock != null && lock.isLocked()) {
-                lock.unlock();
-            }
+            throw new BizException(RespCode.ERROR);
         }
     }
 

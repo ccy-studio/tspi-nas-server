@@ -19,13 +19,22 @@ import java.util.List;
 public interface FileObjectMapper extends BaseMapper<FileObject> {
 
     /**
+     * 检查指定的存储桶内是否具有重复的值存在
+     *
+     * @param bucketId
+     * @param realPaths
+     * @return
+     */
+    List<FileObject> checkRealPathTheDuplicateValue(@Param("bucketId") Long bucketId, @Param("realPaths") List<String> realPaths);
+
+    /**
      * 查询一个根据文件名称和父ID
      *
      * @param fileName
      * @param pid
      * @return
      */
-    FileObject getByFileNameAndParentId(String fileName, Long pid);
+    FileObject getByFileNameAndParentId(@Param("fileName") String fileName, @Param("pid") Long pid);
 
     /**
      * 查询全部根据存储桶id
@@ -34,6 +43,14 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
      * @return
      */
     List<FileObject> getListByBucketId(Long bid);
+
+    /**
+     * 查询全部文件只筛选文件夹的数据
+     *
+     * @param bid
+     * @return
+     */
+    List<FileObject> getDirAllListByBucketId(Long bid);
 
     /**
      * 删除全部文件根据桶id
@@ -89,6 +106,14 @@ public interface FileObjectMapper extends BaseMapper<FileObject> {
      * @return
      */
     int deleteAllByRealPathAndStartWith(String path);
+
+    /**
+     * 删除一个文件如果是目录则一同删除目录下的所有文件 批量操作
+     *
+     * @param path
+     * @return
+     */
+    int deleteAllByRealPathAndStartWithBatch(List<String> path);
 
     /**
      * 查询文件根据路径前缀（包含）

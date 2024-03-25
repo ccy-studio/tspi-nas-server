@@ -19,6 +19,9 @@ mybatis-plus:
   typeAliasesPackage: com.saisaiwa.tspi.nas.domain
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     banner: false
+
+logging:
+  level:
+    com.saisaiwa.tspi.nas.mapper: debug

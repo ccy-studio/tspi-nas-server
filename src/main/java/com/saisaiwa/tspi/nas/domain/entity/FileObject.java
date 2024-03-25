@@ -111,4 +111,10 @@ public class FileObject {
      */
     @TableField("update_user")
     private Long updateUser;
+
+    /**
+     * 临时ID
+     */
+    @TableField(exist = false)
+    private Long tempUid;
 }

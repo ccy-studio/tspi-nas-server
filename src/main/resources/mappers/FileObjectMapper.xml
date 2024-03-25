@@ -10,7 +10,8 @@
     <delete id="deleteAllByFilePathAndStartWith">
         delete
         from t_file_object
-        where file_path like concat(#{path}, '%') and parent_id is not null
+        where file_path like concat(#{path}, '%')
+          and parent_id is not null
     </delete>
     <delete id="deleteByRealPathAndBucketsId">
         delete from t_file_object
@@ -37,6 +38,16 @@
         where real_path like concat(#{realPath}, '%')
           and parent_id is not null
           and real_path != #{realPath}
+    </delete>
+    <delete id="deleteAllByRealPathAndStartWithBatch">
+        delete
+        from t_file_object
+        <where>
+            and parent_id is not null
+            <foreach collection="path" item="p" separator="or" open="and (" close=")">
+                real_path like concat(#{p}, '%')
+            </foreach>
+        </where>
     </delete>
 
     <select id="getListByBucketId" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
@@ -85,6 +96,7 @@
         from t_file_object
         where is_delete = 0
           and file_path like concat(#{path}, '%')
+        order by id
     </select>
     <select id="getByFileNameAndParentId" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
         select *
@@ -109,5 +121,21 @@
         from t_file_object
         where is_delete = 0
           and (real_path = #{path} or real_path like concat(#{path}, '%'))
+    </select>
+    <select id="getDirAllListByBucketId" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
+        select *
+        from t_file_object
+        where buckets_id = #{bid}
+          and is_dir = 1
+    </select>
+    <select id="checkRealPathTheDuplicateValue" resultType="com.saisaiwa.tspi.nas.domain.entity.FileObject">
+        select id, real_path, file_path,is_dir,parent_id
+        from t_file_object
+        where is_delete = 0
+        and buckets_id = #{bucketId}
+        and real_path in
+        <foreach collection="realPaths" open="(" separator="," close=")" item="p">
+            #{p}
+        </foreach>
     </select>
 </mapper>
