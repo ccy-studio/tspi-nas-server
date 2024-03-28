@@ -138,6 +138,11 @@ public class UserServiceImpl implements UserService {
         return user.getSecretKey();
     }
 
+    @Override
+    public User getUserByAccount(String account) {
+        return userMapper.selectByUserAccountUser(account);
+    }
+
     /**
      * 修改密码
      *

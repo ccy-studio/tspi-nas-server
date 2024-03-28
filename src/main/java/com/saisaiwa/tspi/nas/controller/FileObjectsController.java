@@ -1,24 +1,27 @@
 package com.saisaiwa.tspi.nas.controller;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Assert;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.URLUtil;
 import com.saisaiwa.tspi.nas.common.anno.CheckBucketsAcl;
-import com.saisaiwa.tspi.nas.common.bean.*;
+import com.saisaiwa.tspi.nas.common.bean.BaseResponse;
+import com.saisaiwa.tspi.nas.common.bean.IdReq;
+import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
+import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.enums.RespCode;
-import com.saisaiwa.tspi.nas.common.file.FileRangeInputStream;
 import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.enums.BucketsACLEnum;
 import com.saisaiwa.tspi.nas.domain.file.*;
 import com.saisaiwa.tspi.nas.domain.req.BucketsQueryReq;
+import com.saisaiwa.tspi.nas.domain.req.FileObjectSignReq;
 import com.saisaiwa.tspi.nas.domain.req.FileShareListQueryReq;
-import com.saisaiwa.tspi.nas.domain.vo.BucketsInfoVo;
-import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
-import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
-import com.saisaiwa.tspi.nas.domain.vo.FileShareInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.*;
 import com.saisaiwa.tspi.nas.service.BucketsService;
 import com.saisaiwa.tspi.nas.service.FileObjectService;
 import com.saisaiwa.tspi.nas.service.FileShareService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +30,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * 文件对象
@@ -163,6 +168,53 @@ public class FileObjectsController {
         return BaseResponse.ok(fileObjectService.hasFile(has));
     }
 
+
+    /**
+     * 获取签名-下载
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/sign/download")
+    @CheckBucketsAcl({BucketsACLEnum.GET_OBJ})
+    public BaseResponse<FileObjectSignVo> signFileObject(@Validated @RequestBody FileObjectSignReq req, HttpServletResponse response) {
+        setBucketId(req);
+        Assert.notNull(req.getObjectId());
+        Assert.notBlank(req.getUuid());
+        req.setType(0);
+        return toSignResponse(req, response);
+    }
+
+
+    /**
+     * 获取签名-上传
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/sign/upload")
+    @CheckBucketsAcl({BucketsACLEnum.GET_OBJ, BucketsACLEnum.PUT_OBJ})
+    public BaseResponse<FileObjectSignVo> signFileObjectUpload(@Validated @RequestBody FileObjectSignReq req, HttpServletResponse response) {
+        setBucketId(req);
+        req.setType(1);
+        Assert.notNull(req.getObjectId());
+        Assert.notBlank(req.getUuid());
+        return toSignResponse(req, response);
+    }
+
+    private BaseResponse<FileObjectSignVo> toSignResponse(FileObjectSignReq req, HttpServletResponse response) {
+        FileObjectSignVo signVo = fileObjectService.signFileObject(req);
+        Map<String, Object> stringObjectMap = BeanUtil.beanToMap(signVo);
+        stringObjectMap.put("fileName", URLUtil.encodeAll(signVo.getFileName()));
+        stringObjectMap.forEach((k, v) -> {
+            Cookie cookie = new Cookie(k, Optional.ofNullable(v.toString()).orElse(""));
+            cookie.setMaxAge(24 * 60 * 60); // 设置Cookie的最大存活时间为1天
+            cookie.setPath("/"); // 设置Cookie的路径
+            response.addCookie(cookie);
+        });
+        return BaseResponse.ok(signVo);
+    }
+
     /**
      * 上传单体文件
      *
@@ -209,23 +261,6 @@ public class FileObjectsController {
 
 
     /**
-     * 上传块文件
-     *
-     * @param file
-     * @param dat
-     * @return
-     */
-    @CheckBucketsAcl({BucketsACLEnum.GET_OBJ, BucketsACLEnum.PUT_OBJ})
-    @PostMapping("/object/block")
-    public BaseResponse<FileBlockInfoVo> uploadFileBlock(MultipartFile file, FObjectUploadBlock dat) {
-        setBucketId(dat);
-        if (dat.getBlockId() == null || StrUtil.isBlank(dat.getFileName()) || dat.getBucketId() == null) {
-            return BaseResponse.fail(RespCode.INVALID_PARAMS);
-        }
-        return BaseResponse.ok(fileObjectService.uploadFileBlock(file, dat));
-    }
-
-    /**
      * 分块上传的文件进行合并
      *
      * @param idReq
@@ -241,20 +276,19 @@ public class FileObjectsController {
 
     /**
      * 获取文件对象流
-     * 支持预览，支持分段下载
+     * 支持预览
      *
-     * @param dat dat
-     * @return {@link ResponseEntity}<{@link FileRangeInputStream}>
+     * @return {@link ResponseEntity}<{@link InputStreamResource}>
      */
     @GetMapping("/preview")
     @CheckBucketsAcl({BucketsACLEnum.GET_OBJ})
     @ResponseBody
-    public ResponseEntity<InputStreamResource> getFileObjectStream(FObjectGet dat, @RequestHeader(value = "range", required = false) String range) {
+    public ResponseEntity<InputStreamResource> preview(FObjectGet dat) {
         setBucketId(dat);
         Assert.notNull(dat.getObjectId());
-        return fileObjectService.getFileObjectStream(dat, range);
+        dat.setDownload(false);
+        return fileObjectService.getFileObjectStream(dat, null);
     }
-
 
     /**
      * 创建文件外链分享

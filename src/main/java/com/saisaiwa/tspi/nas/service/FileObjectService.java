@@ -4,8 +4,10 @@ import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.domain.entity.FileBlockRecords;
 import com.saisaiwa.tspi.nas.domain.file.*;
 import com.saisaiwa.tspi.nas.domain.req.FileObjectShareGetReq;
+import com.saisaiwa.tspi.nas.domain.req.FileObjectSignReq;
 import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.FileObjectSignVo;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,4 +45,6 @@ public interface FileObjectService {
     ResponseEntity<InputStreamResource> getFileObjectStream(FObjectGet dat, String range);
 
     ResponseEntity<?> getShareFileObject(FileObjectShareGetReq req);
+
+    FileObjectSignVo signFileObject(FileObjectSignReq req);
 }

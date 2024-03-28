@@ -34,6 +34,7 @@ public class ApplicationConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/ok")
                 .excludePathPatterns("/sys/login")
                 .excludePathPatterns("/share/**")
+                .excludePathPatterns("/file/s/**")
                 .excludePathPatterns("/fs/**");
 
         registry.addInterceptor(fileObjectInterceptor)

@@ -1,9 +1,12 @@
 package com.saisaiwa.tspi.nas.service.impl;
 
+import cn.hutool.core.date.DateField;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.SecureUtil;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
 import com.saisaiwa.tspi.nas.common.exception.BizException;
@@ -21,8 +24,10 @@ import com.saisaiwa.tspi.nas.domain.entity.FileObject;
 import com.saisaiwa.tspi.nas.domain.entity.FileObjectShare;
 import com.saisaiwa.tspi.nas.domain.file.*;
 import com.saisaiwa.tspi.nas.domain.req.FileObjectShareGetReq;
+import com.saisaiwa.tspi.nas.domain.req.FileObjectSignReq;
 import com.saisaiwa.tspi.nas.domain.vo.FileBlockInfoVo;
 import com.saisaiwa.tspi.nas.domain.vo.FileObjectInfoVo;
+import com.saisaiwa.tspi.nas.domain.vo.FileObjectSignVo;
 import com.saisaiwa.tspi.nas.mapper.FileBlockRecordsMapper;
 import com.saisaiwa.tspi.nas.mapper.FileObjectMapper;
 import com.saisaiwa.tspi.nas.mapper.FileObjectShareMapper;
@@ -38,6 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.StringJoiner;
 
 /**
  * @description:
@@ -251,6 +257,7 @@ public class FileObjectServiceImpl implements FileObjectService {
         fileObject.setFileName(dat.getFileName());
         fileNativeService.uploadFileObject(file, fileObject, targetObject, dat.getIsOverwrite());
         fileObjectMapper.insert(fileObject);
+        log.info("上传单体文件完成，文件收是否存在： {}", FileUtil.exist(fileObject.getRealPath()));
     }
 
     /**
@@ -351,8 +358,9 @@ public class FileObjectServiceImpl implements FileObjectService {
         }
         FileGetNativeInfo fileGetNativeInfo = fileNativeService.writeOutputFileStream(targetObject, range);
         headers.setContentLength(fileGetNativeInfo.getContentSize());
-        if (dat.isDownload() && StrUtil.isNotBlank(range)) {
+        if (dat.isDownload()) {
             // 设置Content-Range头部
+            headers.set("Accept-Ranges", "bytes");
             headers.set("Content-Range", "bytes " + fileGetNativeInfo.getStart() + "-" + fileGetNativeInfo.getEnd() + "/" + fileGetNativeInfo.getFileSize());
             statusCode = HttpStatus.PARTIAL_CONTENT;
         }
@@ -394,5 +402,59 @@ public class FileObjectServiceImpl implements FileObjectService {
         }
     }
 
+
+    /**
+     * 获取签名
+     *
+     * @param req
+     * @return
+     */
+    @Override
+    public FileObjectSignVo signFileObject(FileObjectSignReq req) {
+        FileObjectSignVo signVo = new FileObjectSignVo();
+
+        String fileName;
+        long fileSize;
+        //类型上传为1，下载为0
+        if (req.getType() == 1) {
+            FileBlockRecords records = blockRecordsMapper.selectById(req.getObjectId());
+            if (records == null) {
+                throw new FileObjectNotFound();
+            }
+            fileName = records.getFileName();
+            fileSize = records.getFileSize();
+        } else {
+            FileObject fileObject = fileObjectMapper.getByIdNoDel(req.getObjectId());
+            if (!fileObject.getBucketsId().equals(req.getBucketId())) {
+                throw new FileObjectNotFound();
+            }
+            if (fileObject.getIsDir()) {
+                throw new BizException("文件夹类型无法直接下载");
+            }
+            fileName = fileObject.getFileName();
+            fileSize = fileObject.getFileSize();
+        }
+        double fileSizeInMb = (double) fileSize / (1024 * 1024);
+        double downloadTimeInSeconds = Math.ceil((fileSizeInMb * 8) / 500);
+        log.info("========>>>>downloadTimeInSeconds = {}", downloadTimeInSeconds);
+        DateTime offset = DateTime.now().offset(DateField.SECOND, (int) Math.max(60, 60 + downloadTimeInSeconds));
+        signVo.setBkId(req.getBucketId());
+        signVo.setObjectId(req.getObjectId());
+        signVo.setFileSize(fileSize);
+        signVo.setFileName(fileName);
+        signVo.setUuid(req.getUuid());
+        signVo.setExpireTime(offset.getTime());
+
+        //签名
+        StringJoiner stringJoiner = new StringJoiner(";");
+        stringJoiner.add(signVo.getUuid())
+                .add(signVo.getObjectId() + "")
+                .add(signVo.getBkId() + "")
+                .add(signVo.getExpireTime() + "")
+                .add(SessionInfo.get().getSk() + SessionInfo.get().getUser().getUserAccount())
+                .add(req.getType() + "");
+        signVo.setSignString(SecureUtil.sha256(stringJoiner.toString()));
+        return signVo;
+    }
 
 }

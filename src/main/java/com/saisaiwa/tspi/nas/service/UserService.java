@@ -1,6 +1,7 @@
 package com.saisaiwa.tspi.nas.service;
 
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
+import com.saisaiwa.tspi.nas.domain.entity.User;
 import com.saisaiwa.tspi.nas.domain.req.UserPasswordReq;
 import com.saisaiwa.tspi.nas.domain.req.UserQueryReq;
 import com.saisaiwa.tspi.nas.domain.req.UserRegisterReq;
@@ -24,6 +25,8 @@ public interface UserService {
     void updateUser(UserUpdateReq req);
 
     String getSk(String account);
+
+    User getUserByAccount(String account);
 
     void changePassword(UserPasswordReq req);
 
