@@ -2,10 +2,10 @@ package com.saisaiwa.tspi.nas.service.impl;
 
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
@@ -257,7 +257,6 @@ public class FileObjectServiceImpl implements FileObjectService {
         fileObject.setFileName(dat.getFileName());
         fileNativeService.uploadFileObject(file, fileObject, targetObject, dat.getIsOverwrite());
         fileObjectMapper.insert(fileObject);
-        log.info("上传单体文件完成，文件收是否存在： {}", FileUtil.exist(fileObject.getRealPath()));
     }
 
     /**
@@ -351,7 +350,9 @@ public class FileObjectServiceImpl implements FileObjectService {
         }
         HttpStatusCode statusCode = HttpStatus.OK;
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentDispositionFormData(dat.isDownload() ? "attachment" : "inline", URLEncodeUtil.encode(targetObject.getFileName()));
+        headers.setContentDisposition(ContentDisposition.builder(dat.isDownload() ? "attachment" : "inline")
+                .filename(URLEncodeUtil.encode(targetObject.getFileName()))
+                .build());
         headers.setContentType(MediaType.parseMediaType(targetObject.getFileContentType()));
         if (!dat.isDownload()) {
             range = null;
@@ -386,7 +387,7 @@ public class FileObjectServiceImpl implements FileObjectService {
             throw new MessageBoxException("来晚咯，分享已过期！");
         }
         if (share.getIsSymlink() || req.isForceSymlink()) {
-            if (!share.getAccessPassword().equals(req.getPwd())) {
+            if (StrUtil.isNotBlank(share.getAccessPassword()) && !share.getAccessPassword().equals(req.getPwd())) {
                 throw new BizException("密码不正确！");
             }
             //直链

@@ -47,7 +47,7 @@ public class FileShareController {
      */
     @GetMapping("/object/{key}")
     public ResponseEntity<?> getShareFileObject(@NotBlank @PathVariable String key,
-                                                @RequestParam(required = false, value = "d", defaultValue = "true") boolean download,
+                                                @RequestParam(required = false, value = "d", defaultValue = "false") boolean download,
                                                 @RequestHeader(required = false, value = "range") String range,
                                                 @RequestParam(required = false, value = "pwd") String password) {
         FileObjectShareGetReq req = new FileObjectShareGetReq();

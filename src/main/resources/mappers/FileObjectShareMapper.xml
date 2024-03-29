@@ -34,7 +34,9 @@
             <if test="uid neq null">
                 and s.create_user = #{uid}
             </if>
-            and bk.id = #{bucketsId}
+            <if test="bucketsId neq null">
+                and bk.id = #{bucketsId}
+            </if>
             <if test="fileName neq null and fileName neq ''">
                 and f.file_name like concat('%',#{fileName},'%')
             </if>

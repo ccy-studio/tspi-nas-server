@@ -4,6 +4,7 @@ import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.IdUtil;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
 import com.saisaiwa.tspi.nas.common.bean.SessionInfo;
+import com.saisaiwa.tspi.nas.common.exception.BizException;
 import com.saisaiwa.tspi.nas.common.exception.FileObjectNotFound;
 import com.saisaiwa.tspi.nas.domain.convert.FileObjectConvert;
 import com.saisaiwa.tspi.nas.domain.dto.FileObjectShareExtDto;
@@ -63,7 +64,7 @@ public class FileShareServiceImpl implements FileShareService {
             share.setFileObjectId(fileObject.getId());
             share.setSignKey(IdUtil.objectId());
         }
-        share.setExpirationTime(LocalDateTimeUtil.parse(dat.getExpirationTime()));
+        share.setExpirationTime(LocalDateTimeUtil.parse(dat.getExpirationTime(), "yyyy-MM-dd HH:mm:ss"));
         share.setAccessPassword(dat.getAccessPassword());
         share.setIsSymlink(dat.isSymlink());
         if (share.getId() == null) {
@@ -72,6 +73,21 @@ public class FileShareServiceImpl implements FileShareService {
             fileObjectShareMapper.updateById(share);
         }
         return FileObjectConvert.INSTANCE.toFileShareInfoVo(fileObjectShareMapper.getExtBySignKey(share.getSignKey()));
+    }
+
+
+    /**
+     * 删除一个分享通过ID
+     *
+     * @param id
+     */
+    @Override
+    public void removeShareById(Long id) {
+        FileObjectShare share = fileObjectShareMapper.selectById(id);
+        if (!share.getCreateUser().equals(SessionInfo.get().getUid())) {
+            throw new BizException("删除失败");
+        }
+        fileObjectShareMapper.deleteById(id);
     }
 
     /**

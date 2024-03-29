@@ -16,5 +16,7 @@ public interface FileShareService {
 
     FileShareInfoVo createObjectShare(FObjectShare dat);
 
+    void removeShareById(Long id);
+
     PageBodyResponse<FileShareInfoVo> getMyShareAll(FileShareListQueryReq req);
 }

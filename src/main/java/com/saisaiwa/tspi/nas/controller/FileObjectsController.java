@@ -302,6 +302,17 @@ public class FileObjectsController {
         return BaseResponse.ok(fileShareService.createObjectShare(dat));
     }
 
+    /**
+     * 删除一个分享通过ID
+     *
+     * @param req
+     */
+    @DeleteMapping("/share")
+    public BaseResponse<Void> removeShareById(@RequestBody @Validated IdReq<Long> req) {
+        fileShareService.removeShareById(req.getId());
+        return BaseResponse.ok();
+    }
+
 
     /**
      * 获取用户的创建分享数据
@@ -310,9 +321,7 @@ public class FileObjectsController {
      * @return
      */
     @GetMapping("/share")
-    @CheckBucketsAcl({BucketsACLEnum.GET_OBJ, BucketsACLEnum.SHARE_OBJ})
     public BaseResponse<PageBodyResponse<FileShareInfoVo>> getMyShareAll(FileShareListQueryReq req) {
-        req.setBucketsId(SessionInfo.get().getBucketPermission().getBucketsId());
         req.setUid(SessionInfo.get().getUid());
         return BaseResponse.ok(fileShareService.getMyShareAll(req));
     }
