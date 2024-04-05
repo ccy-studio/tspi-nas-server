@@ -47,16 +47,20 @@
         group by bk.id
     </select>
     <select id="selectBucketsPremissByUid" resultType="com.saisaiwa.tspi.nas.domain.dto.BucketsPremissDto">
-        select bk.*,
-               ugb.user_id,
+        SELECT bk.*,
+               gu.user_id,
                pr.action,
                pr.effect
-        from t_buckets as bk
-                 join t_resources as res on res.id = bk.res_id
-                 join t_resources_user_group as rug on rug.res_id = bk.res_id
-                 left join t_policies_rule as pr on pr.buckets_id = bk.id and pr.user_id = #{uid}
-                 left join t_user_group_bind as ugb on ugb.user_group_id = rug.user_group_id
-        where bk.is_delete = 0
-          and bk.id = #{bkId}
+        FROM t_buckets AS bk
+                 JOIN t_resources AS res ON res.id = bk.res_id
+                 LEFT JOIN t_policies_rule AS pr ON pr.buckets_id = bk.id
+            AND pr.user_id = #{uid}
+                 LEFT JOIN (select ugb.user_id, rug.res_id
+                            from t_resources_user_group as rug
+                                     join t_user_group_bind as ugb on ugb.user_group_id = rug.user_group_id
+                            where ugb.user_id = #{uid}) as gu on gu.res_id = bk.res_id
+        WHERE bk.is_delete = 0
+          AND bk.id = #{bkId}
+        group by bk.id
     </select>
 </mapper>
