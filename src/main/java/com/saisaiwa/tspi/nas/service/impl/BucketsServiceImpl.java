@@ -329,6 +329,12 @@ public class BucketsServiceImpl implements BucketsService {
                     if (actions.contains(BucketsACLEnum.DEL_OBJ.getPremiss())) {
                         vo.setDelete(true);
                     }
+                    if (actions.contains(BucketsACLEnum.PUT_OBJ.getPremiss())) {
+                        vo.setWrite(true);
+                    }
+                    if (actions.contains(BucketsACLEnum.GET_OBJ.getPremiss())) {
+                        vo.setRead(true);
+                    }
                 } else {
                     //拒绝策略
                     if (!actions.contains(BucketsACLEnum.SHARE_OBJ.getPremiss())) {

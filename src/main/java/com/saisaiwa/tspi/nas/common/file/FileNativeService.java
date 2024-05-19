@@ -70,7 +70,7 @@ public class FileNativeService {
         String point = buckets.getMountPoint();
         if (FileUtil.exist(point)) {
             log.error("创建存储桶失败，已经存在该路径的文件");
-            throw new BizException(RespCode.FILE_ERROR);
+            throw new BizException("创建存储桶失败，已经存在该路径的文件");
         }
         File mkdir = FileUtil.mkdir(point);
         if (mkdir == null) {

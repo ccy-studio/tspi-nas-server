@@ -30,10 +30,11 @@ public class AppReadyEvent {
         fileLocalScanService.scanAllBuckets();
         log.info(" -同步完成！");
 
-        log.info("3. 启动磁盘文件监听器…………");
-        //启动文件监听
-        fileLocalScanService.initListener();
-        log.info(" -文件监听开启成功");
+        //todo 文件监听扫描在开发板上暂时有bug，修复后再打开。
+//        log.info("3. 启动磁盘文件监听器…………");
+//        //启动文件监听
+//        fileLocalScanService.initListener();
+//        log.info(" -文件监听开启成功");
 
 
         log.info("******》》》系统启动成功《《《******");
