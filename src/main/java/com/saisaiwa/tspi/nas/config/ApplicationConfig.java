@@ -32,6 +32,7 @@ public class ApplicationConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/ok");
         registry.addInterceptor(sysSessionInterceptor)
                 .excludePathPatterns("/ok")
+                .excludePathPatterns("/favicon.ico")
                 .excludePathPatterns("/sys/login")
                 .excludePathPatterns("/share/**")
                 .excludePathPatterns("/file/s/**")

@@ -247,6 +247,10 @@ public class BucketsServiceImpl implements BucketsService {
 
     /**
      * 获取此用户对存储桶所具有的权限信息
+     * 权限描述：
+     * 1. 权限私有仅自己看见
+     * 2. 权限公读私写，指定读的范围
+     * 3. 权限公读公写，指定读和写的范围
      *
      * @param bucketsId
      * @param uid
@@ -268,88 +272,58 @@ public class BucketsServiceImpl implements BucketsService {
             vo.setDelete(true);
             vo.setShare(true);
             vo.setManage(true);
-        } else if (dto.getPermissions().equals(BucketsPermissionEnum.PR_PRIVATE.getPremiss())
-                && !dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_PRIVATE.getPremiss())) {
-            //桶是私有权限且是非私有的范围
-            if (dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_GROUP.getPremiss()) && dto.getUserId() == null) {
-                //用户不在组内拒绝
-                return vo;
-            }
-            if (!actions.isEmpty() && dto.getEffect() != null) {
-                if (dto.getEffect()) {
-                    //允许策略
-                    if (actions.contains(BucketsACLEnum.GET_OBJ.getPremiss())) {
-                        vo.setRead(true);
-                    } else if (actions.contains(BucketsACLEnum.DEL_OBJ.getPremiss())) {
-                        vo.setDelete(true);
-                    } else if (actions.contains(BucketsACLEnum.PUT_OBJ.getPremiss())) {
-                        vo.setWrite(true);
-                    } else if (actions.contains(BucketsACLEnum.SHARE_OBJ.getPremiss())) {
-                        vo.setShare(true);
-                    }
-                } else {
-                    //拒绝策略
-                    vo.setRead(true);
-                    vo.setWrite(true);
-                    vo.setDelete(true);
-                    vo.setShare(true);
-                    if (actions.contains(BucketsACLEnum.GET_OBJ.getPremiss())) {
-                        vo.setRead(false);
-                        vo.setWrite(false);
-                        vo.setDelete(false);
-                        vo.setShare(false);
-                    } else if (actions.contains(BucketsACLEnum.DEL_OBJ.getPremiss())) {
-                        vo.setDelete(false);
-                    } else if (actions.contains(BucketsACLEnum.PUT_OBJ.getPremiss())) {
-                        vo.setWrite(false);
-                    } else if (actions.contains(BucketsACLEnum.SHARE_OBJ.getPremiss())) {
-                        vo.setShare(false);
-                    }
-                }
-            }
-        } else if (!dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_PRIVATE.getPremiss())) {
-            //可能是1公读公写、2公读私写。但是权限范围不是私有的
-            if (dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_GROUP.getPremiss()) && dto.getUserId() == null) {
-                //用户不在组内拒绝
-                return vo;
-            }
-            if (dto.getPermissions().equals(BucketsPermissionEnum.PR_R.getPremiss())) {
+            return vo;
+        } else if (dto.getPermissions().equals(BucketsPermissionEnum.PR_RW.getPremiss())) {
+            //桶是公读公写
+            if (dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_GROUP.getPremiss()) && dto.getUserId() != null) {
+                //权限范围是资源内公开
                 vo.setRead(true);
-            } else if (dto.getPermissions().equals(BucketsPermissionEnum.PR_RW.getPremiss())) {
+                vo.setWrite(true);
+            } else if (dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_ALL.getPremiss())) {
+                //权限范围是全公开
                 vo.setRead(true);
                 vo.setWrite(true);
             }
-            //再次判断策略配置
-            if (!actions.isEmpty() && dto.getEffect() != null) {
-                if (dto.getEffect()) {
-                    //允许策略
-                    if (actions.contains(BucketsACLEnum.SHARE_OBJ.getPremiss())) {
-                        vo.setShare(true);
-                    }
-                    if (actions.contains(BucketsACLEnum.DEL_OBJ.getPremiss())) {
-                        vo.setDelete(true);
-                    }
-                    if (actions.contains(BucketsACLEnum.PUT_OBJ.getPremiss())) {
-                        vo.setWrite(true);
-                    }
-                    if (actions.contains(BucketsACLEnum.GET_OBJ.getPremiss())) {
-                        vo.setRead(true);
-                    }
-                } else {
-                    //拒绝策略
-                    if (!actions.contains(BucketsACLEnum.SHARE_OBJ.getPremiss())) {
-                        vo.setShare(true);
-                    }
-                    if (actions.contains(BucketsACLEnum.GET_OBJ.getPremiss())) {
-                        vo.setRead(false);
-                        vo.setWrite(false);
-                        vo.setDelete(false);
-                        vo.setShare(false);
-                    } else if (actions.contains(BucketsACLEnum.DEL_OBJ.getPremiss())) {
-                        vo.setDelete(false);
-                    } else if (actions.contains(BucketsACLEnum.PUT_OBJ.getPremiss())) {
-                        vo.setWrite(false);
-                    }
+        } else if (dto.getPermissions().equals(BucketsPermissionEnum.PR_R.getPremiss())) {
+            //桶是公读私写
+            if (dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_GROUP.getPremiss()) && dto.getUserId() != null) {
+                //权限范围是资源内公开
+                vo.setRead(true);
+            } else if (dto.getPermissionsScope().equals(BucketsPermissionScopeEnum.PS_ALL.getPremiss())) {
+                //权限范围是全公开
+                vo.setRead(true);
+            }
+        }
+        //再次判断策略配置-依据用户的ACL
+        if (!actions.isEmpty() && dto.getEffect() != null) {
+            if (dto.getEffect()) {
+                //允许策略
+                if (actions.contains(BucketsACLEnum.SHARE_OBJ.getPremiss())) {
+                    vo.setShare(true);
+                }
+                if (actions.contains(BucketsACLEnum.DEL_OBJ.getPremiss())) {
+                    vo.setDelete(true);
+                }
+                if (actions.contains(BucketsACLEnum.PUT_OBJ.getPremiss())) {
+                    vo.setWrite(true);
+                }
+                if (actions.contains(BucketsACLEnum.GET_OBJ.getPremiss())) {
+                    vo.setRead(true);
+                }
+            } else {
+                //拒绝策略
+                if (!actions.contains(BucketsACLEnum.SHARE_OBJ.getPremiss())) {
+                    vo.setShare(true);
+                }
+                if (actions.contains(BucketsACLEnum.GET_OBJ.getPremiss())) {
+                    vo.setRead(false);
+                    vo.setWrite(false);
+                    vo.setDelete(false);
+                    vo.setShare(false);
+                } else if (actions.contains(BucketsACLEnum.DEL_OBJ.getPremiss())) {
+                    vo.setDelete(false);
+                } else if (actions.contains(BucketsACLEnum.PUT_OBJ.getPremiss())) {
+                    vo.setWrite(false);
                 }
             }
         }
