@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.saisaiwa.tspi.nas.mapper.BucketsMapper">
+    <delete id="deleteLogicById">
+        update t_buckets set is_delete = id where id = #{id}
+    </delete>
 
     <select id="selectByBucketsName" resultType="com.saisaiwa.tspi.nas.mapper.BucketsMapper">
         select *
@@ -28,7 +31,6 @@
             left join t_user_group_bind as ugb on ugb.user_group_id = rug.user_group_id
         </if>
         <where>
-            and bk.is_delete = 0
             <if test="id neq null">
                 and bk.id = #{id}
             </if>
@@ -42,7 +44,9 @@
                 (bk.permissions != 0 and bk.permissions_scope = 1 and ugb.user_id = #{uid})
                 )
             </if>
-            and bk.is_delete = 0
+            <if test="!showLogicDel">
+                and bk.is_delete = 0
+            </if>
         </where>
         group by bk.id
     </select>

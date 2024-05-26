@@ -18,6 +18,14 @@ import java.util.List;
  */
 public interface BucketsMapper extends BaseMapper<Buckets> {
 
+
+    /**
+     * 逻辑删除
+     * @param id
+     * @return
+     */
+    int deleteLogicById(Long id);
+
     /**
      * 查询桶根据名称
      *
@@ -42,7 +50,7 @@ public interface BucketsMapper extends BaseMapper<Buckets> {
      * @param uid     为空则不限制全部查询，传入用户ID则查询此用户可看的数据
      * @return
      */
-    List<BucketsExtDto> selectTableList(@Param("id") Long id, @Param("keyword") String keyword, @Param("uid") Long uid);
+    List<BucketsExtDto> selectTableList(@Param("id") Long id, @Param("keyword") String keyword, @Param("uid") Long uid, @Param("showLogicDel") boolean showLogicDel);
 
     /**
      * 查询此用户对存储桶的权限信息

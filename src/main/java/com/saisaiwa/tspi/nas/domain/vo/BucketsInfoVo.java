@@ -46,6 +46,9 @@ public class BucketsInfoVo {
      */
     private Long rootFolderId;
 
+
+    private Long isDelete;
+
     /**
      * 用户的ACL
      */

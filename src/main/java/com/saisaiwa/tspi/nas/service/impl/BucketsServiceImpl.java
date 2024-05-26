@@ -1,5 +1,6 @@
 package com.saisaiwa.tspi.nas.service.impl;
 
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.saisaiwa.tspi.nas.common.bean.PageBodyResponse;
@@ -212,15 +213,16 @@ public class BucketsServiceImpl implements BucketsService {
      * 查询此用户可见的存储桶
      *
      * @param req
+     * @param showLogicDel 是否显示逻辑删除的数据
      * @return
      */
     @Override
-    public List<BucketsInfoVo> getBucketAll(BucketsQueryReq req) {
+    public List<BucketsInfoVo> getBucketAll(BucketsQueryReq req, boolean showLogicDel) {
         Long uid = SessionInfo.get().getUid();
         if (uid.intValue() == UserEnum.ADMIN.getCode()) {
             uid = null;
         }
-        List<BucketsExtDto> dtoList = bucketsMapper.selectTableList(req.getId(), req.getKeyword(), uid);
+        List<BucketsExtDto> dtoList = bucketsMapper.selectTableList(req.getId(), req.getKeyword(), uid, showLogicDel);
         List<BucketsInfoVo> infoVos = BucketsConvert.INSTANCE.toBucketsInfoVo(dtoList);
         if (Boolean.TRUE.equals(req.getDisplayPermission())) {
             for (BucketsInfoVo infoVo : infoVos) {
@@ -328,6 +330,30 @@ public class BucketsServiceImpl implements BucketsService {
             }
         }
         return vo;
+    }
+
+    /**
+     * 尝试重新恢复存储桶
+     * @param id
+     * @return
+     */
+    @Override
+    public boolean tryRecoveryBucket(Long id) {
+        Buckets buckets = bucketsMapper.selectById(id);
+        Assert.notNull(buckets);
+        if (buckets.getIsDelete().equals(0L)) {
+            return true;
+        }
+        if (!FileUtil.exist(buckets.getMountPoint())) {
+            return false;
+        }
+        if (!FileUtil.isDirectory(buckets.getMountPoint())) {
+            return false;
+        }
+        buckets.setIsDelete(0L);
+        bucketsMapper.updateById(buckets);
+        localScanTask.scanFileDiffAndFix(buckets);
+        return true;
     }
 
 }
