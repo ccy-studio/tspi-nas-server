@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @description:
@@ -168,7 +167,7 @@ public class FileLocalScanService {
         File file = new File(buckets.getMountPoint());
         if (!file.exists() || !file.isDirectory()) {
             log.error("scanFileDiffAndFix 此bucket（{}）被移除，因为文件不存在", buckets.getBucketsName());
-            bucketsMapper.deleteById(buckets.getId());
+            bucketsMapper.deleteLogicById(buckets.getId());
             return;
         }
         //文件是存在的

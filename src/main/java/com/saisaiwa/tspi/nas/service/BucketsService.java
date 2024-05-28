@@ -31,7 +31,9 @@ public interface BucketsService {
 
     PageBodyResponse<BucketsAclInfoVo> getAclByBucketsAll(BucketsAclQueryReq req);
 
-    List<BucketsInfoVo> getBucketAll(BucketsQueryReq req);
+    List<BucketsInfoVo> getBucketAll(BucketsQueryReq req,boolean showLogicDel);
 
     BucketsPermissionUserVo getPermissionByUser(Long bucketsId, Long uid);
+
+    boolean tryRecoveryBucket(Long id);
 }

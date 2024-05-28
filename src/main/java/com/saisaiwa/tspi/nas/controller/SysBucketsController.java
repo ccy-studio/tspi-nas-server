@@ -64,7 +64,7 @@ public class SysBucketsController {
     /**
      * 删除一个存储桶根据ID
      *
-     * @param bid
+     * @param req bid
      * @return
      */
     @PostMapping("/delete")
@@ -118,7 +118,19 @@ public class SysBucketsController {
      */
     @GetMapping("list")
     public BaseResponse<List<BucketsInfoVo>> getBucketAll(BucketsQueryReq req) {
-        return BaseResponse.ok(bucketsService.getBucketAll(req));
+        return BaseResponse.ok(bucketsService.getBucketAll(req, true));
+    }
+
+
+    /**
+     * 尝试重新恢复存储桶
+     *
+     * @param req -ID
+     * @return
+     */
+    @PostMapping("tryRecovery")
+    public BaseResponse<Boolean> tryRecoveryBucket(@RequestBody @Validated IdReq<Long> req) {
+        return BaseResponse.ok(bucketsService.tryRecoveryBucket(req.getId()));
     }
 
     /**

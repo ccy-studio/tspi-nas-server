@@ -67,7 +67,7 @@ public class FileObjectsController {
      */
     @GetMapping("/buckets")
     public BaseResponse<List<BucketsInfoVo>> getBucketAll(BucketsQueryReq req) {
-        return BaseResponse.ok(bucketsService.getBucketAll(req));
+        return BaseResponse.ok(bucketsService.getBucketAll(req,false));
     }
 
 
