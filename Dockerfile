@@ -9,6 +9,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 ADD nas-0.0.1-SNAPSHOT.jar root.jar
 
-EXPOSE 8080
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-server", "-XX:InitialRAMPercentage=75.0", "-XX:MaxRAMPercentage=75.0", "-Xss512k", "-XX:MetaspaceSize=256m", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=100","-Dfile.encoding=UTF-8", "-Dnetworkaddress.cache.ttl=10", "-jar", "/root.jar","--spring.profiles.active=dev"]
